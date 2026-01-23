@@ -1,5 +1,5 @@
 /* --------------------------------------------- */
-/* server:core                                   */
+/* server_core                                   */
 /* --------------------------------------------- */
 
 const express = require("express");
@@ -68,9 +68,9 @@ const ownsServer = async (req, res, next) => {
       if (!id || typeof id !== 'string') return '';
       return id.includes('-') ? id.split('-')[0] : id;
     };
-    
+
     const normalizedTargetId = normalizeId(serverId);
-    
+
     // FIRST CHECK: Get fresh data from Pterodactyl API instead of using session data
     let isOwner = false;
     try {
@@ -84,23 +84,23 @@ const ownsServer = async (req, res, next) => {
           },
         }
       );
-      
+
       const ownedServers = userResponse.data.attributes.relationships.servers.data;
-      
+
       // Check if user owns the server directly
       isOwner = ownedServers.some(s => {
         const serverId = s.attributes?.identifier;
         console.log(`checking server ${serverId}`);
         console.log(`unnormalized server ID: ${serverId}`);
         console.log(`normalized target ID: ${normalizedTargetId}`);
-        
+
         return normalizeId(serverId) === normalizedTargetId;
       });
     } catch (error) {
       console.error('Error fetching fresh server data from Pterodactyl:', error);
       // Continue with other checks even if this one fails
     }
-    
+
     if (isOwner) {
       return next();
     }
@@ -114,41 +114,41 @@ const ownsServer = async (req, res, next) => {
     } catch (error) {
       console.error('Error checking force access:', error);
     }
-    
+
     // SECOND CHECK: Check if user is a subuser via pterodactyl username
     try {
       const pteroUsername = req.session.pterodactyl.username;
       const subuserServers = await db.get(`subuser-servers-${pteroUsername}`) || [];
-      
+
       let hasAccess = subuserServers.some(server => {
         const normalizedSubuserId = normalizeId(server?.id);
         return normalizedSubuserId === normalizedTargetId;
       });
-      
+
       if (hasAccess) {
         return next();
       }
     } catch (error) {
       console.error('Error checking subuser access by username:', error);
     }
-    
+
     // THIRD CHECK: Check if user is a subuser via discord ID
     try {
       const discordId = req.session.userinfo.id;
       const discordServers = await db.get(`subuser-servers-discord-${discordId}`) || [];
-      
+
       let hasAccess = discordServers.some(server => {
         const normalizedSubuserId = normalizeId(server?.id);
         return normalizedSubuserId === normalizedTargetId;
       });
-      
+
       if (hasAccess) {
         return next();
       }
     } catch (error) {
       console.error('Error checking subuser access by discord ID:', error);
     }
-    
+
     // FOURTH CHECK: Direct check with Pterodactyl API for subuser permissions
     try {
       const serverResponse = await axios.get(
@@ -160,12 +160,12 @@ const ownsServer = async (req, res, next) => {
           },
         }
       );
-      
+
       // Check if user is a subuser on this server
       const userIsSubuser = serverResponse.data.attributes.relationships.users.data.some(
         user => user.attributes.id === req.session.pterodactyl.id
       );
-      
+
       if (userIsSubuser) {
         return next();
       }
@@ -175,7 +175,7 @@ const ownsServer = async (req, res, next) => {
 
     // Log why we don't have access
     console.log(`User ${req.session.pterodactyl.username} (${req.session.userinfo.id}) does not have access to server ${serverId}`);
-    
+
     // If we get here, user doesn't have access
     return res.status(403).json({ error: 'You do not have permission to access this server' });
   } catch (error) {
@@ -188,14 +188,14 @@ const ownsServer = async (req, res, next) => {
 async function logActivity(db, serverId, action, details) {
   const timestamp = new Date().toISOString();
   const activityLog = await db.get(`activity_log_${serverId}`) || [];
-  
+
   activityLog.unshift({ timestamp, action, details });
-  
+
   // Keep only the last 100 activities
   if (activityLog.length > 100) {
     activityLog.pop();
   }
-  
+
   await db.set(`activity_log_${serverId}`, activityLog);
 }
 

@@ -1,10 +1,10 @@
 /* --------------------------------------------- */
-/* server:files_read                             */
+/* server_files_read                             */
 /* --------------------------------------------- */
 
 const express = require("express");
 const axios = require("axios");
-const { isAuthenticated, ownsServer, PANEL_URL, API_KEY } = require("./server:core.js");
+const { isAuthenticated, ownsServer, PANEL_URL, API_KEY } = require("./server_core.js");
 
 /* --------------------------------------------- */
 /* Heliactyl Next Module                                  */
@@ -38,7 +38,7 @@ module.exports.load = async function (app, db) {
     try {
       const serverId = req.params.id;
       const file = encodeURIComponent(req.query.file); // URL-encode the file path
-      
+
       const response = await axios.get(
         `${PANEL_URL}/api/client/servers/${serverId}/files/contents?file=${file}`,
         {
@@ -64,7 +64,7 @@ module.exports.load = async function (app, db) {
     try {
       const serverId = req.params.id;
       const file = req.query.file;
-      
+
       const response = await axios.get(
         `${PANEL_URL}/api/client/servers/${serverId}/files/download`,
         {
@@ -76,7 +76,7 @@ module.exports.load = async function (app, db) {
           },
         }
       );
-      
+
       res.json(response.data);
     } catch (error) {
       console.error("Error getting download link:", error);

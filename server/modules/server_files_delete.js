@@ -1,10 +1,10 @@
 /* --------------------------------------------- */
-/* server:files_delete                           */
+/* server_files_delete                           */
 /* --------------------------------------------- */
 
 const express = require("express");
 const axios = require("axios");
-const { isAuthenticated, ownsServer, logActivity, PANEL_URL, API_KEY } = require("./server:core.js");
+const { isAuthenticated, ownsServer, logActivity, PANEL_URL, API_KEY } = require("./server_core.js");
 
 /* --------------------------------------------- */
 /* Heliactyl Next Module                                  */

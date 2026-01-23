@@ -1,10 +1,10 @@
 /* --------------------------------------------- */
-/* server:users_legacy                           */
+/* server_users_legacy                           */
 /* --------------------------------------------- */
 
 const express = require("express");
-const { isAuthenticated } = require("./server:core.js");
-const { updateSubuserInfo } = require("./server:users.js");
+const { isAuthenticated } = require("./server_core.js");
+const { updateSubuserInfo } = require("./server_users.js");
 
 /* --------------------------------------------- */
 /* Heliactyl Next Module                                  */
@@ -39,22 +39,22 @@ module.exports.load = async function (app, db) {
       // Get identifiers for both systems
       const pteroUsername = req.session.pterodactyl.username;
       const discordId = req.session.userinfo.id;
-      
+
       // Get servers from both storage methods
       const pteroServers = await db.get(`subuser-servers-${pteroUsername}`) || [];
       const discordServers = await db.get(`subuser-servers-discord-${discordId}`) || [];
-      
+
       // Merge the two lists, avoiding duplicates
       const allServers = [...pteroServers];
       const serverIds = new Set(pteroServers.map(s => s.id));
-      
+
       discordServers.forEach(server => {
         if (!serverIds.has(server.id)) {
           allServers.push(server);
           serverIds.add(server.id);
         }
       });
-      
+
       res.json(allServers);
     } catch (error) {
       console.error('Error fetching subuser servers:', error);
@@ -68,10 +68,10 @@ module.exports.load = async function (app, db) {
       const pteroUsername = req.session.pterodactyl.username;
       const pteroId = req.session.pterodactyl.id;
       const discordId = req.session.userinfo.id;
-      
+
       // Add the current user to the all_users list
       await addUserToAllUsersList(pteroId, db);
-      
+
       // Map Discord ID to Pterodactyl username and vice versa
       await updateUserMappings(pteroUsername, discordId, pteroId, db);
 
@@ -84,25 +84,25 @@ module.exports.load = async function (app, db) {
       // Fetch and sync subuser servers from both systems
       const pteroServers = await db.get(`subuser-servers-${pteroUsername}`) || [];
       const discordServers = await db.get(`subuser-servers-discord-${discordId}`) || [];
-      
+
       // Merge the two arrays
       const allServers = [...pteroServers];
       const serverIds = new Set(pteroServers.map(s => s.id));
-      
+
       discordServers.forEach(server => {
         if (!serverIds.has(server.id)) {
           allServers.push(server);
           serverIds.add(server.id);
         }
       });
-      
+
       // Update all servers
       for (const server of allServers) {
         await updateSubuserInfo(server.id, server.ownerId, db);
       }
 
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         message: 'User servers synced successfully',
         servers: allServers.length
       });
@@ -114,22 +114,22 @@ module.exports.load = async function (app, db) {
 
   async function addUserToAllUsersList(userId, db) {
     if (!userId) return;
-    
+
     let allUsers = await db.get('all_users') || [];
     if (!allUsers.includes(userId)) {
       allUsers.push(userId);
       await db.set('all_users', allUsers);
     }
   }
-  
+
   async function updateUserMappings(pteroUsername, discordId, pteroId, db) {
     if (!pteroUsername || !discordId) return;
-    
+
     // Create ptero-to-discord mapping
     let pteroMap = await db.get('pterodactyl-discord-map') || {};
     pteroMap[pteroUsername] = discordId;
     await db.set('pterodactyl-discord-map', pteroMap);
-    
+
     // Create discord-to-ptero mapping
     let discordMap = await db.get('discord-pterodactyl-map') || {};
     discordMap[discordId] = {

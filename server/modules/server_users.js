@@ -1,10 +1,10 @@
 /* --------------------------------------------- */
-/* server:users                                  */
+/* server_users                                  */
 /* --------------------------------------------- */
 
 const express = require("express");
 const axios = require("axios");
-const { isAuthenticated, ownsServer, PANEL_URL, API_KEY } = require("./server:core.js");
+const { isAuthenticated, ownsServer, PANEL_URL, API_KEY } = require("./server_core.js");
 const loadConfig = require("../handlers/config.js");
 const settings = loadConfig("./config.toml");
 const Database = require("../db.js");
@@ -43,14 +43,14 @@ async function addUserToAllUsersList(userId) {
   }
 }
 
- // Helper function to find discord user by email
- async function findDiscordIdFromEmail(email, db) {
+// Helper function to find discord user by email
+async function findDiscordIdFromEmail(email, db) {
   // Check if it's already a discord email format
   const discordMatch = email.match(/^discord_([^@+]+)(?:\+\d+)?@/);
   if (discordMatch) {
     return discordMatch[1]; // Return the extracted discord ID
   }
-  
+
   // Search all discord-* keys for matching email
   const allUsers = await db.get('all_users') || [];
   for (const userId of allUsers) {
@@ -59,26 +59,26 @@ async function addUserToAllUsersList(userId) {
       return userId;
     }
   }
-  
+
   return null;
 }
 
-  async function getServerName(serverId) {
-    try {
-      const response = await axios.get(
-        `${PANEL_URL}/api/client/servers/${serverId}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${API_KEY}`,
-            'Accept': 'application/json',
-          },
-        }
-      );
-      return response.data.attributes.name;
-    } catch (error) {
-      return 'Unknown Server';
-    }
+async function getServerName(serverId) {
+  try {
+    const response = await axios.get(
+      `${PANEL_URL}/api/client/servers/${serverId}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${API_KEY}`,
+          'Accept': 'application/json',
+        },
+      }
+    );
+    return response.data.attributes.name;
+  } catch (error) {
+    return 'Unknown Server';
   }
+}
 
 // Modified update subuser info
 async function updateSubuserInfo(serverId, serverOwnerId) {
@@ -102,7 +102,7 @@ async function updateSubuserInfo(serverId, serverOwnerId) {
     await db.set(`subusers-${serverId}`, subusers);
 
     const serverName = await getServerName(serverId);
-    
+
     // Process each subuser and create mappings for both email types
     for (const subuser of subusers) {
       // Standard storage by pterodactyl username
@@ -115,7 +115,7 @@ async function updateSubuserInfo(serverId, serverOwnerId) {
         });
         await db.set(`subuser-servers-${subuser.id}`, subuserServers);
       }
-      
+
       // Find the discord ID associated with this user
       const discordId = await findDiscordIdFromEmail(subuser.email, db);
       if (discordId) {
@@ -154,9 +154,9 @@ module.exports.load = async function (app, db) {
           },
         }
       );
-      
+
       await updateSubuserInfo(serverId, req.session.userinfo.id);
-      
+
       res.json(response.data);
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -176,8 +176,8 @@ module.exports.load = async function (app, db) {
 
       const response = await axios.post(
         `${PANEL_URL}/api/client/servers/${serverId}/users`,
-        { 
-          email, 
+        {
+          email,
           permissions: [
             "control.console", "control.start", "control.stop", "control.restart",
             "user.create", "user.read", "user.update", "user.delete",

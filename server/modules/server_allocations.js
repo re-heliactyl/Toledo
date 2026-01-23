@@ -1,10 +1,10 @@
 /* --------------------------------------------- */
-/* server:allocations                            */
+/* server_allocations                            */
 /* --------------------------------------------- */
 
 const express = require("express");
 const axios = require("axios");
-const { isAuthenticated, ownsServer, PANEL_URL, API_KEY } = require("./server:core.js");
+const { isAuthenticated, ownsServer, PANEL_URL, API_KEY } = require("./server_core.js");
 
 /* --------------------------------------------- */
 /* Heliactyl Next Module                                  */
@@ -40,7 +40,7 @@ module.exports.load = async function (app, db) {
 
       // Fetch allocations from Pterodactyl Panel
       const response = await axios.get(
-        `${PANEL_URL}/api/client/servers/${serverId}/network/allocations`, 
+        `${PANEL_URL}/api/client/servers/${serverId}/network/allocations`,
         {
           headers: {
             'Authorization': `Bearer ${API_KEY}`,
@@ -61,9 +61,9 @@ module.exports.load = async function (app, db) {
       res.json(allocations);
     } catch (error) {
       console.error('Error fetching allocations:', error);
-      res.status(500).json({ 
-        error: 'Failed to fetch allocations', 
-        details: error.response?.data || error.message 
+      res.status(500).json({
+        error: 'Failed to fetch allocations',
+        details: error.response?.data || error.message
       });
     }
   });
@@ -97,9 +97,9 @@ module.exports.load = async function (app, db) {
       res.status(201).json(newAllocation);
     } catch (error) {
       console.error('Error adding allocation:', error);
-      res.status(500).json({ 
-        error: 'Failed to add allocation', 
-        details: error.response?.data || error.message 
+      res.status(500).json({
+        error: 'Failed to add allocation',
+        details: error.response?.data || error.message
       });
     }
   });
@@ -122,9 +122,9 @@ module.exports.load = async function (app, db) {
       res.status(200).json({ message: 'Allocation removed successfully' });
     } catch (error) {
       console.error('Error removing allocation:', error);
-      res.status(500).json({ 
-        error: 'Failed to remove allocation', 
-        details: error.response?.data || error.message 
+      res.status(500).json({
+        error: 'Failed to remove allocation',
+        details: error.response?.data || error.message
       });
     }
   });

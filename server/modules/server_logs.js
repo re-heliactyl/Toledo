@@ -1,15 +1,15 @@
 /* --------------------------------------------- */
-/* server:logs                                   */
+/* server_logs                                   */
 /* --------------------------------------------- */
 
 const express = require("express");
-const { isAuthenticated, ownsServer } = require("./server:core.js");
+const { isAuthenticated, ownsServer } = require("./server_core.js");
 
 /* --------------------------------------------- */
 /* Heliactyl Next Module                                  */
 /* --------------------------------------------- */
 const HeliactylModule = {
-  "name": "Server -> Logs", 
+  "name": "Server -> Logs",
   "version": "1.0.0",
   "api_level": 4,
   "target_platform": "10.0.0",
@@ -38,19 +38,19 @@ module.exports.load = async function (app, db) {
       const serverId = req.params.id;
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 20;
-      
+
       // Get logs from database
       const activityLog = await db.get(`activity_log_${serverId}`) || [];
-      
+
       // Calculate pagination
       const startIndex = (page - 1) * limit;
       const endIndex = startIndex + limit;
       const totalLogs = activityLog.length;
       const totalPages = Math.ceil(totalLogs / limit);
-      
+
       // Get paginated logs
       const paginatedLogs = activityLog.slice(startIndex, endIndex);
-      
+
       // Format response with pagination metadata
       const response = {
         data: paginatedLogs,

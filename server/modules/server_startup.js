@@ -1,10 +1,10 @@
 /* --------------------------------------------- */
-/* server:startup                                */
+/* server_startup                                */
 /* --------------------------------------------- */
 
 const express = require("express");
 const axios = require("axios");
-const { isAuthenticated, PANEL_URL, API_KEY, ADMIN_KEY } = require("./server:core.js");
+const { isAuthenticated, PANEL_URL, API_KEY, ADMIN_KEY } = require("./server_core.js");
 
 /* --------------------------------------------- */
 /* Heliactyl Next Module                                  */

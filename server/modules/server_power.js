@@ -1,12 +1,12 @@
 /* --------------------------------------------- */
-/* server:power                                   */
+/* server_power                                   */
 /* --------------------------------------------- */
 
 const express = require("express");
 const axios = require("axios");
 const loadConfig = require("../handlers/config");
 const settings = loadConfig("./config.toml");
-const { isAuthenticated, ownsServer, logActivity, PANEL_URL, API_KEY } = require("./server:core.js");
+const { isAuthenticated, ownsServer, logActivity, PANEL_URL, API_KEY } = require("./server_core.js");
 
 /* --------------------------------------------- */
 /* Heliactyl Next Module                                  */
@@ -36,12 +36,12 @@ module.exports.load = async function (app, db) {
   if (HeliactylModule.target_platform !== settings.version) {
     console.log(
       "Module " +
-        HeliactylModule.name +
-        " does not support this platform release of Heliactyl Next. The module was built for platform " +
-        HeliactylModule.target_platform +
-        " but is attempting to run on version " +
-        settings.version +
-        "."
+      HeliactylModule.name +
+      " does not support this platform release of Heliactyl Next. The module was built for platform " +
+      HeliactylModule.target_platform +
+      " but is attempting to run on version " +
+      settings.version +
+      "."
     );
     process.exit();
   }
@@ -104,7 +104,7 @@ module.exports.load = async function (app, db) {
 
       await sendCommandAndGetResponse(serverId, command);
       await logActivity(db, serverId, 'Send Command', { command });
-      
+
       res.json({ success: true, message: "Command sent successfully" });
     } catch (error) {
       console.error("Error sending command:", error);

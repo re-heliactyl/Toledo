@@ -1,10 +1,10 @@
 /* --------------------------------------------- */
-/* server:files_list                             */
+/* server_files_list                             */
 /* --------------------------------------------- */
 
 const express = require("express");
 const axios = require("axios");
-const { isAuthenticated, ownsServer, PANEL_URL, API_KEY } = require("./server:core.js");
+const { isAuthenticated, ownsServer, PANEL_URL, API_KEY } = require("./server_core.js");
 
 /* --------------------------------------------- */
 /* Heliactyl Next Module                                  */
@@ -44,7 +44,7 @@ module.exports.load = async function (app, db) {
       const response = await axios.get(
         `${PANEL_URL}/api/client/servers/${serverId}/files/list`,
         {
-          params: { 
+          params: {
             directory,
             page: page,
             per_page: perPage
