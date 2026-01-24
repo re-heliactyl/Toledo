@@ -31,7 +31,6 @@ const HeliactylModule = {
 };
 
 if (HeliactylModule.target_platform !== settings.version) {
-  console.log('Module ' + HeliactylModule.name + ' does not support this platform release of Heliactyl Next. The module was built for platform ' + HeliactylModule.target_platform + ' but is attempting to run on version ' + settings.version + '.')
   process.exit()
 }
 
@@ -271,7 +270,6 @@ module.exports.load = async function (app, db) {
 
       // If user doesn't exist in Pterodactyl, create new account
       if (cacheaccount.status === 404 || !pterodactylId) {
-        console.log(`Recreating Pterodactyl account for user ${user.username}`);
         pterodactylId = await createPterodactylAccount(user.username, user.email);
         
         // Update database with new Pterodactyl ID

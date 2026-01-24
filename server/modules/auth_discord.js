@@ -207,7 +207,6 @@ async function addDiscordServerMember(userId, accessToken, username) {
         accessToken: accessToken,
         nick: username
       });
-      console.log(`Added user ${userId} (${username}) to Discord server`);
     }
     return true;
   } catch (error) {
@@ -227,15 +226,12 @@ async function addUserNotification(db, userId, notification) {
 
 // Discord bot setup
 client.once('ready', () => {
-  //console.log(`Discord bot logged in as ${client.user.tag}`);
 });
 
 client.on('error', (error) => {
-  console.log('Discord bot error:', error);
 });
 
 client.login(DISCORD_BOT_TOKEN).catch((error) => {
-  console.log('Failed to login Discord bot:', error);
   process.exit(1);
 });
 
@@ -388,7 +384,6 @@ module.exports.load = async function (app, db) {
 
       res.redirect('/dashboard');
     } catch (error) {
-      console.log('Discord OAuth error:', error);
       res.status(500).json({ 
         error: 'Authentication failed. Try using regular email and password authentication or join discord.gg/freehosting to get support.',
         details: process.env.NODE_ENV === 'development' ? error.message : undefined

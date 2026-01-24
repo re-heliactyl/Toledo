@@ -232,7 +232,6 @@ module.exports.load = async function(app, db) {
           "panel rebuilt",
           `${req.session.userinfo.username} successfully rebuilt the panel.`
         );
-        console.log(`Panel rebuild output: ${stdout}`);
         if (stderr) console.error(`Panel rebuild stderr: ${stderr}`);
       });
     } catch (error) {
@@ -1241,7 +1240,6 @@ module.exports.load = async function(app, db) {
       }
   
       const newUser = await response.json();
-      console.log(response.text());
       res.status(201).json(newUser);
     } catch (error) {
       console.error("Error creating user:", error);
@@ -1537,7 +1535,6 @@ app.get("/api/users/:id/resources", async (req, res) => {
 
   try {
     const pterodactylId = req.params.id;
-    console.log('Received request for Pterodactyl ID:', pterodactylId);
 
     // First check if this is already a Heliactyl Next user ID
     const directCheck = await db.get("users-" + pterodactylId);
@@ -1617,7 +1614,6 @@ app.patch("/api/users/:id/coins", async (req, res) => {
 
   try {
     const pterodactylId = req.params.id;
-    console.log('Received update coins request for Pterodactyl ID:', pterodactylId);
 
     // First check if this is already a Heliactyl Next user ID
     const directCheck = await db.get("users-" + pterodactylId);
@@ -1667,7 +1663,6 @@ app.patch("/api/users/:id/resources", async (req, res) => {
 
   try {
     const pterodactylId = req.params.id;
-    console.log('Received update resources request for Pterodactyl ID:', pterodactylId);
 
     // First check if this is already a Heliactyl Next user ID
     const directCheck = await db.get("users-" + pterodactylId);

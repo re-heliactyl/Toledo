@@ -134,8 +134,6 @@ class StakingManager {
       // Get all users with active stakes
       const activeUsers = await this.db.get("staking-active-users") || [];
 
-      //console.log(`Processing rewards for ${activeUsers.length} users (module: staking)`);
-
       for (const userId of activeUsers) {
         try {
           const stakes = await this.db.get(`stakes-${userId}`) || [];
