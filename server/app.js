@@ -10,6 +10,7 @@ const fs = require("fs").promises;
 const fsSync = require("fs");
 const express = require("express");
 const session = require("express-session");
+const SQLiteStore = require('connect-sqlite3')(session);
 const nocache = require('nocache');
 const cookieParser = require('cookie-parser');
 const path = require('path');
@@ -60,6 +61,10 @@ app.use(express.json({
 }));
 
 const sessionConfig = {
+  store: new SQLiteStore({
+    db: 'sessions.db',
+    dir: './'
+  }),
   secret: settings.website.secret,
   resave: false,
   saveUninitialized: false,
