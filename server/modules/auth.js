@@ -37,13 +37,13 @@ if (HeliactylModule.target_platform !== settings.version) {
 async function createPterodactylAccount(username, email) {
   const axios = require('axios');
   const genpassword = makeid(settings.api.client.passwordgenerator.length);
-  
+
   // Sanitize username: remove spaces and special characters, convert to lowercase
   const sanitizedUsername = username
     .toLowerCase()
     .replace(/[^a-z0-9]/g, '')
     .substring(0, 32); // Ensure username isn't too long
-    
+
   try {
     const response = await axios({
       method: 'post',
@@ -112,29 +112,29 @@ module.exports.load = async function (app, db) {
       throw new Error('Failed to send email');
     }
   };
-  
+
   // Modify login process to check for 2FA
   // This middleware should be added to your auth routes
   app.use((req, res, next) => {
     // Store the original login completion function
     const originalLogin = req.login;
-    
+
     // Override the login function
-    req.login = async function(user, options, done) {
+    req.login = async function (user, options, done) {
       try {
         // Check if user has 2FA enabled
         const twoFactorData = await db.get(`2fa-${user.id}`);
-        
+
         if (twoFactorData?.enabled) {
           // Set a flag in session that 2FA is required
           req.session.twoFactorPending = true;
           req.session.twoFactorUserId = user.id;
-          
+
           // Don't complete login yet
           if (done) done(null);
           return;
         }
-        
+
         // No 2FA required, proceed with normal login
         return originalLogin.call(this, user, options, done);
       } catch (error) {
@@ -142,10 +142,10 @@ module.exports.load = async function (app, db) {
         if (done) done(error);
       }
     };
-    
+
     next();
   });
-  
+
   // Registration route
   app.post("/auth/register", rateLimit, async (req, res) => {
     const { username, email, password } = req.body;
@@ -271,7 +271,7 @@ module.exports.load = async function (app, db) {
       // If user doesn't exist in Pterodactyl, create new account
       if (cacheaccount.status === 404 || !pterodactylId) {
         pterodactylId = await createPterodactylAccount(user.username, user.email);
-        
+
         // Update database with new Pterodactyl ID
         let userids = (await db.get("users")) || [];
         userids = userids.filter(id => id !== pterodactylId); // Remove old ID if exists

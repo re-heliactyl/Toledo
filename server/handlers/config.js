@@ -28,10 +28,10 @@ function updateObjectInPlace(target, source) {
   // Update or add keys from source
   Object.keys(source).forEach(key => {
     const value = source[key];
-    
+
     // If both are objects (and not null), recurse
-    if (value && typeof value === 'object' && !Array.isArray(value) && 
-        target[key] && typeof target[key] === 'object' && !Array.isArray(target[key])) {
+    if (value && typeof value === 'object' && !Array.isArray(value) &&
+      target[key] && typeof target[key] === 'object' && !Array.isArray(target[key])) {
       updateObjectInPlace(target[key], value);
     } else {
       target[key] = value;
@@ -78,7 +78,7 @@ function loadConfig(filePath = 'config.toml') {
       try {
         const updatedTomlString = fs.readFileSync(fullPath, 'utf8');
         const updatedConfig = toml.parse(updatedTomlString);
-        
+
         // Update the cached object in place so all modules referencing it see the change
         updateObjectInPlace(configData, updatedConfig);
       } catch (err) {

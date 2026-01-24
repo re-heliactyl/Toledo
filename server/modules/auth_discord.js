@@ -65,22 +65,22 @@ async function createPterodactylAccount(userId, username, email, retryCount = 0)
   const sanitizeUsername = (name) => {
     // Remove any characters that aren't allowed
     let cleaned = name.replace(/[^a-zA-Z0-9._-]/g, '');
-    
+
     // If starts with non-alphanumeric, prepend 'u'
     if (!cleaned.match(/^[a-zA-Z0-9]/)) {
       cleaned = 'u' + cleaned;
     }
-    
+
     // If ends with non-alphanumeric, append random number
     if (!cleaned.match(/[a-zA-Z0-9]$/)) {
       cleaned = cleaned + Math.floor(Math.random() * 9 + 1);
     }
-    
+
     // Ensure we have at least one character
     if (cleaned.length === 0) {
       cleaned = 'user' + Math.floor(Math.random() * 1000);
     }
-    
+
     return cleaned;
   };
 
@@ -113,10 +113,10 @@ async function createPterodactylAccount(userId, username, email, retryCount = 0)
 
     const responseText = await response.text();
     let data;
-    
+
     try {
       data = JSON.parse(responseText);
-      
+
       // If we got JSON but it's an error response
       if (!response.ok) {
         if (response.status === 422 && retryCount < 3) {
@@ -242,7 +242,7 @@ module.exports.load = async function (app, db) {
   app.get('/auth/discord/login', (req, res) => {
     const state = uuidv4();
     req.session.oauthState = state;
-    
+
     const params = new URLSearchParams({
       client_id: DISCORD_CLIENT_ID,
       redirect_uri: DISCORD_REDIRECT_URI,
@@ -310,16 +310,16 @@ module.exports.load = async function (app, db) {
       if (!pteroId || !(await verifyPterodactylAccount(pteroId))) {
         const pteroAccount = await createPterodactylAccount(userData.id, userData.username, userData.email);
         pteroId = pteroAccount.id;
-        
+
         let userids = await db.get("users") || [];
         userids = userids.filter(id => id !== pteroId);
         userids.push(pteroId);
         await db.set("users", userids);
         await db.set(`users-${userData.id}`, pteroId);
-        
+
         isNewUser = !userRecord;
       }
-      
+
       // Update user record with current information and maintain pteroId for stability
       userRecord = {
         id: userData.id,
@@ -331,14 +331,14 @@ module.exports.load = async function (app, db) {
         createdAt: userRecord?.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
-      
+
       await db.set(`discord-${userData.id}`, userRecord);
 
       // Add signup bonus for new users
       if (isNewUser) {
         const currentCoins = await db.get(`coins-${userData.id}`) || 0;
         await db.set(`coins-${userData.id}`, currentCoins + DISCORD_SIGNUP_BONUS);
-        
+
         await addUserNotification(db, userData.id, {
           action: "coins:bonus",
           name: `Discord Signup Bonus: +${DISCORD_SIGNUP_BONUS} coins`
@@ -346,7 +346,7 @@ module.exports.load = async function (app, db) {
       }
 
       const twoFactorData = await db.get(`2fa-${userData.id}`);
-    
+
       if (twoFactorData?.enabled) {
         // Set a flag in session that 2FA is required
         req.session.twoFactorPending = true;
@@ -356,7 +356,7 @@ module.exports.load = async function (app, db) {
           username: userData.username,
           email: userData.email
         };
-        
+
         // Redirect to 2FA verification page instead of dashboard
         return res.redirect('/auth/2fa');
       }
@@ -384,7 +384,7 @@ module.exports.load = async function (app, db) {
 
       res.redirect('/dashboard');
     } catch (error) {
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'Authentication failed. Try using regular email and password authentication or join discord.gg/freehosting to get support.',
         details: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
@@ -399,7 +399,7 @@ module.exports.load = async function (app, db) {
 
     const userId = req.session.userinfo.id;
     const userRecord = await db.get(`discord-${userId}`);
-    
+
     if (!userRecord?.refresh_token) {
       return res.status(400).json({ error: 'No refresh token available' });
     }
@@ -428,7 +428,7 @@ module.exports.load = async function (app, db) {
       userRecord.access_token = tokenData.access_token;
       userRecord.refresh_token = tokenData.refresh_token;
       userRecord.updatedAt = new Date().toISOString();
-      
+
       await db.set(`discord-${userId}`, userRecord);
 
       res.json({ message: 'Token refreshed successfully' });

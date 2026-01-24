@@ -27,7 +27,7 @@ const HeliactylModule = {
 
 /* Module */
 module.exports.HeliactylModule = HeliactylModule;
-module.exports.load = async function(app, db) {
+module.exports.load = async function (app, db) {
   app.get(`/api/password`, async (req, res) => {
     if (!req.session.userinfo.id) return res.redirect("/login");
 
@@ -111,8 +111,8 @@ module.exports.load = async function(app, db) {
     }
 
     if (!(hasNumber && hasUpperCase && hasLowerCase)) {
-      return res.status(400).json({ 
-        error: "Password must contain at least one number, one uppercase letter, and one lowercase letter" 
+      return res.status(400).json({
+        error: "Password must contain at least one number, one uppercase letter, and one lowercase letter"
       });
     }
 
@@ -125,28 +125,28 @@ module.exports.load = async function(app, db) {
     }
   });
 
-// Helper function to update password
-async function updatePassword(userInfo, newPassword, settings, db) {
-  await fetch(
-    `${settings.pterodactyl.domain}/api/application/users/${userInfo.id}`,
-    {
-      method: "patch",
-      headers: {
-        'Content-Type': 'application/json',
-        "Authorization": `Bearer ${settings.pterodactyl.key}`
-      },
-      body: JSON.stringify({
-        username: userInfo.username,
-        email: userInfo.email,
-        first_name: userInfo.first_name,
-        last_name: userInfo.last_name,
-        password: newPassword
-      })
-    }
-  ).then(res => res.json());
+  // Helper function to update password
+  async function updatePassword(userInfo, newPassword, settings, db) {
+    await fetch(
+      `${settings.pterodactyl.domain}/api/application/users/${userInfo.id}`,
+      {
+        method: "patch",
+        headers: {
+          'Content-Type': 'application/json',
+          "Authorization": `Bearer ${settings.pterodactyl.key}`
+        },
+        body: JSON.stringify({
+          username: userInfo.username,
+          email: userInfo.email,
+          first_name: userInfo.first_name,
+          last_name: userInfo.last_name,
+          password: newPassword
+        })
+      }
+    ).then(res => res.json());
 
-  await db.set("password-" + userInfo.id, newPassword);
-}
+    await db.set("password-" + userInfo.id, newPassword);
+  }
 };
 
 function makeid(length) {
@@ -154,7 +154,7 @@ function makeid(length) {
   let characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   let charactersLength = characters.length;
   for (let i = 0; i < length; i++) {
-     result += characters.charAt(Math.floor(Math.random() * charactersLength));
+    result += characters.charAt(Math.floor(Math.random() * charactersLength));
   }
   return result;
 }

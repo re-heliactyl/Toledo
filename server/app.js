@@ -64,7 +64,7 @@ const sessionConfig = {
   secret: settings.website.secret,
   resave: false,
   saveUninitialized: false,
-  cookie: { 
+  cookie: {
     secure: process.env.NODE_ENV === 'production',
     maxAge: 1000 * 60 * 60 * 24 * 7 // 1 week
   },
@@ -115,11 +115,11 @@ global.__rootdir = __dirname;
   try {
     // Initialize module loader
     const moduleLoader = new ModuleLoader(app, db, VERSION, API_LEVEL);
-    
+
     // Load all modules
     const loadedModules = await moduleLoader.loadAllModules();
     //logger.info(`Successfully loaded ${loadedModules.size} modules`);
-    
+
     // Store module information globally for admin panel
     global.moduleInfo = moduleLoader.getLoadedModuleInfo();
 
@@ -130,7 +130,7 @@ global.__rootdir = __dirname;
       if (req.path.startsWith('/assets/')) return next();
       const appPath = '/' + req.path;
       const fullPath = appPath + (req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : '');
-      
+
       res.redirect(301, fullPath);
     });
 
@@ -138,7 +138,7 @@ global.__rootdir = __dirname;
     const server = app.listen(settings.website.port, "0.0.0.0", () => {
       const bootTime = process.hrtime(startTime);
       const bootTimeMs = (bootTime[0] * 1000 + bootTime[1] / 1000000).toFixed(2);
-      logger.info(`${chalk.red('https server')} listening on ` + chalk.cyan(`0.0.0.0:${settings.website.port} ` + chalk.gray(`(app@${VERSION} / ${PLATFORM_CODENAME}, ${bootTimeMs > 1000 ? (bootTimeMs/1000).toFixed(2) + 's' : bootTimeMs + 'ms'})`)), {}, true);
+      logger.info(`${chalk.red('https server')} listening on ` + chalk.cyan(`0.0.0.0:${settings.website.port} ` + chalk.gray(`(app@${VERSION} / ${PLATFORM_CODENAME}, ${bootTimeMs > 1000 ? (bootTimeMs / 1000).toFixed(2) + 's' : bootTimeMs + 'ms'})`)), {}, true);
       //logger.info(`Systems operational - booted in ${bootTimeMs > 1000 ? (bootTimeMs/1000).toFixed(2) + 's' : bootTimeMs + 'ms'}`);
     });
 

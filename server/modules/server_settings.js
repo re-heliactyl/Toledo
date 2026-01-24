@@ -6,28 +6,28 @@ const axios = require('axios');
 
 /* Ensure platform release target is met */
 const HeliactylModule = {
-  "name": "Server -> Settings",
-  "version": "1.0.0",
-  "api_level": 4,
-  "target_platform": "10.0.0",
-  "description": "Core module",
-  "author": {
-    "name": "Matt James",
-    "email": "me@ether.pizza",
-    "url": "https://ether.pizza"
-  },
-  "dependencies": [],
-  "permissions": [],
-  "routes": [],
-  "config": {},
-  "hooks": [],
-  "tags": ['core'],
-  "license": "MIT"
+    "name": "Server -> Settings",
+    "version": "1.0.0",
+    "api_level": 4,
+    "target_platform": "10.0.0",
+    "description": "Core module",
+    "author": {
+        "name": "Matt James",
+        "email": "me@ether.pizza",
+        "url": "https://ether.pizza"
+    },
+    "dependencies": [],
+    "permissions": [],
+    "routes": [],
+    "config": {},
+    "hooks": [],
+    "tags": ['core'],
+    "license": "MIT"
 };
 
 /* Module */
 module.exports.HeliactylModule = HeliactylModule;
-module.exports.load = async function(app, db) {
+module.exports.load = async function (app, db) {
     const router = express.Router();
 
     // Middleware to check if user is authenticated
@@ -44,7 +44,7 @@ module.exports.load = async function(app, db) {
         const serverId = req.params.id;
         const userServers = req.session.pterodactyl.relationships.servers.data;
         const serverOwned = userServers.some(server => server.attributes.identifier === serverId);
-        
+
         if (serverOwned) {
             next();
         } else {
@@ -76,15 +76,15 @@ module.exports.load = async function(app, db) {
             const serverId = req.params.id;
             const { name } = req.body; // Expecting the new name for the server in the request body
 
-            await axios.post(`${settings.pterodactyl.domain}/api/client/servers/${serverId}/settings/rename`, 
-            { name: name }, 
-            {
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${settings.pterodactyl.client_key}`
-                }
-            });
+            await axios.post(`${settings.pterodactyl.domain}/api/client/servers/${serverId}/settings/rename`,
+                { name: name },
+                {
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${settings.pterodactyl.client_key}`
+                    }
+                });
             res.status(204).send(); // No content response on success
         } catch (error) {
             console.error('Error renaming server:', error);

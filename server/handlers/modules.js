@@ -69,20 +69,20 @@ class ModuleLoader {
     const scanDirectory = async (dir, baseDir) => {
       try {
         const entries = await fs.readdir(dir, { withFileTypes: true });
-        
+
         for (const entry of entries) {
           const fullPath = path.join(dir, entry.name);
-          
+
           if (entry.isDirectory()) {
             // Recursively scan subdirectory
             await scanDirectory(fullPath, baseDir);
           } else if (entry.isFile() && entry.name.endsWith(".js")) {
             // Calculate the module ID relative to the base modules directory
             const relativePath = path.relative(baseDir, fullPath);
-            const moduleId = path.dirname(relativePath) === "." 
+            const moduleId = path.dirname(relativePath) === "."
               ? path.basename(relativePath, ".js")
               : path.dirname(relativePath) + "/" + path.basename(relativePath, ".js");
-            
+
             modules.push({
               id: moduleId,
               path: fullPath
@@ -128,7 +128,7 @@ class ModuleLoader {
             }
             continue;
           }
-          
+
           visit(dep.name);
         }
       }
@@ -155,9 +155,9 @@ class ModuleLoader {
     try {
       // Clear require cache to ensure fresh load
       delete require.cache[require.resolve(modulePath)];
-      
+
       const moduleExports = require(modulePath);
-      
+
       if (!moduleExports.HeliactylModule) {
         this.logger.error(`Module ${moduleId} is missing HeliactylModule manifest`);
         return false;
@@ -224,7 +224,7 @@ class ModuleLoader {
 
     // Sort modules by dependency
     const sortedModuleIds = this.sortModulesByDependency(this.moduleRegistry);
-    
+
     // Initialize modules in order
     for (const moduleId of sortedModuleIds) {
       await this.initializeModule(moduleId);

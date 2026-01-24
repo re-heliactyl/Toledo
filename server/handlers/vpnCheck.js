@@ -11,7 +11,7 @@ module.exports = (key, db, ip, res) => {
         await fetch(`https://proxycheck.io/v2/${ip}?key=${key}&vpn=1`)
       )
         .json()
-        .catch(() => {});
+        .catch(() => { });
     }
     if (ipcache || (vpncheck && vpncheck[ip])) {
       if (!ipcache) ipcache = vpncheck[ip].proxy;

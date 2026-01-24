@@ -10,9 +10,9 @@ module.exports = (userid, db) => {
     console.log(await db.get("users-" + userid));
     let cacheaccount = await fetch(
       settings.pterodactyl.domain +
-        "/api/application/users/" +
-        (await db.get("users-" + userid)) +
-        "?include=servers",
+      "/api/application/users/" +
+      (await db.get("users-" + userid)) +
+      "?include=servers",
       {
         method: "get",
         headers: {

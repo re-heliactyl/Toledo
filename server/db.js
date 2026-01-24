@@ -56,7 +56,7 @@ class HeliactylDB {
 
     // Enable WAL mode for better concurrency
     this.db.run('PRAGMA journal_mode = WAL');
-    
+
     // Initialize the database table
     this.initializeDatabase().catch(err => {
       console.error('Failed to initialize database:', err);
@@ -101,7 +101,7 @@ class HeliactylDB {
             value TEXT NOT NULL,
             created_at INTEGER DEFAULT (strftime('%s', 'now'))
           )`;
-        
+
         this.db.serialize(() => {
           this.db.run('BEGIN TRANSACTION');
           this.db.run(createTableSQL, (err) => {
@@ -110,14 +110,14 @@ class HeliactylDB {
               reject(err);
               return;
             }
-            
+
             this.db.run('CREATE INDEX IF NOT EXISTS idx_heliactyl_key ON heliactyl ([key])', (indexErr) => {
               if (indexErr) {
                 this.db.run('ROLLBACK');
                 reject(indexErr);
                 return;
               }
-              
+
               this.db.run('COMMIT', (commitErr) => {
                 if (commitErr) {
                   reject(commitErr);
@@ -161,7 +161,7 @@ class HeliactylDB {
           reject(error);
         }
       });
-      
+
       this.processQueue();
     });
   }
@@ -184,13 +184,13 @@ class HeliactylDB {
       const result = await operation();
       const operationTime = Date.now() - startTime;
       this.updateStats(operationTime);
-      
+
       // Log successful transaction
       dbLogger.info('Database transaction completed', {
         operationTime,
         queueLength: this.queue.length
       });
-      
+
       resolve(result);
     } catch (error) {
       // Log failed transaction
@@ -198,7 +198,7 @@ class HeliactylDB {
         error: error.message,
         queueLength: this.queue.length
       });
-      
+
       console.error('Database operation failed:', error);
       reject(error);
     } finally {
@@ -216,7 +216,7 @@ class HeliactylDB {
   updateStats(operationTime) {
     this.totalOperationTime += operationTime;
     this.operationCount++;
-    
+
     // Reset stats periodically to prevent overflow
     if (this.operationCount > 1000000) {
       this.totalOperationTime = operationTime;
@@ -245,7 +245,7 @@ class HeliactylDB {
    */
   async cleanupExpired() {
     if (!this.ttlSupport) return;
-    
+
     return this.executeQuery(() => new Promise((resolve, reject) => {
       this.db.run(`DELETE FROM ${this.tableName} WHERE json_extract(value, "$.expires") < ?`, [Date.now()], (err) => {
         if (err) reject(err);
@@ -264,7 +264,7 @@ class HeliactylDB {
    */
   async get(key) {
     if (!key) throw new Error('Key is required');
-    
+
     return this.executeQuery(() => new Promise((resolve, reject) => {
       this.db.get(`SELECT value FROM ${this.tableName} WHERE [key] = ?`, [`${this.namespace}:${key}`], (err, row) => {
         if (err) {
@@ -302,7 +302,7 @@ class HeliactylDB {
    */
   async set(key, value, ttl) {
     if (!key) throw new Error('Key is required');
-    
+
     const expires = this.ttlSupport && ttl ? Date.now() + ttl : undefined;
     const data = JSON.stringify({
       value,
@@ -330,7 +330,7 @@ class HeliactylDB {
    */
   async delete(key) {
     if (!key) throw new Error('Key is required');
-    
+
     return this.executeQuery(() => new Promise((resolve, reject) => {
       this.db.run(`DELETE FROM ${this.tableName} WHERE [key] = ?`, [`${this.namespace}:${key}`], (err) => {
         if (err) {
@@ -370,7 +370,7 @@ class HeliactylDB {
    */
   async has(key) {
     if (!key) throw new Error('Key is required');
-    
+
     return this.executeQuery(() => new Promise((resolve, reject) => {
       this.db.get(`SELECT 1 FROM ${this.tableName} WHERE [key] = ?`, [`${this.namespace}:${key}`], (err, row) => {
         if (err) {
@@ -467,7 +467,7 @@ class HeliactylDB {
   async search(pattern) {
     return this.executeQuery(() => new Promise((resolve, reject) => {
       this.db.all(
-        `SELECT [key] FROM ${this.tableName} WHERE [key] LIKE ?`, 
+        `SELECT [key] FROM ${this.tableName} WHERE [key] LIKE ?`,
         [`${this.namespace}:${pattern}`],
         (err, rows) => {
           if (err) {
@@ -491,10 +491,10 @@ class HeliactylDB {
   async setMultiple(entries, ttl) {
     return this.executeQuery(() => new Promise((resolve, reject) => {
       const stmt = this.db.prepare(`INSERT OR REPLACE INTO ${this.tableName} ([key], value) VALUES (?, ?)`);
-      
+
       this.db.serialize(() => {
         this.db.run('BEGIN TRANSACTION');
-        
+
         try {
           for (const [key, value] of Object.entries(entries)) {
             const data = JSON.stringify({
@@ -503,7 +503,7 @@ class HeliactylDB {
             });
             stmt.run(`${this.namespace}:${key}`, data);
           }
-          
+
           this.db.run('COMMIT', (err) => {
             if (err) reject(err);
             else resolve();

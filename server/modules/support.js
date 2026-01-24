@@ -26,11 +26,11 @@ const HeliactylModule = {
 
 /* Module */
 module.exports.HeliactylModule = HeliactylModule;
-module.exports.load = async function(app, db) {
+module.exports.load = async function (app, db) {
   // Middleware to check admin status
   async function checkAdmin(req, res, settings, db) {
     if (!req.session.pterodactyl) return false;
-    
+
     try {
       let cacheaccount = await fetch(
         `${settings.pterodactyl.domain}/api/application/users/${await db.get("users-" + req.session.userinfo.id)}?include=servers`,
@@ -42,7 +42,7 @@ module.exports.load = async function(app, db) {
           }
         }
       );
-      
+
       if ((await cacheaccount.statusText) === "Not Found") return false;
       let cacheaccountinfo = JSON.parse(await cacheaccount.text());
       return cacheaccountinfo.attributes.root_admin === true;
@@ -60,7 +60,7 @@ module.exports.load = async function(app, db) {
 
     try {
       const tickets = await db.get('tickets') || [];
-      
+
       const stats = {
         total: tickets.length,
         open: tickets.filter(t => t.status === 'open').length,
@@ -90,56 +90,56 @@ module.exports.load = async function(app, db) {
 
   app.post("/api/notifications/:id/read", async (req, res) => {
     if (!req.session.pterodactyl) return res.status(401).json({ error: "Unauthorized" });
-  
+
     try {
       let notifications = await db.get(`notifications-${req.session.userinfo.id}`) || [];
       const notificationIndex = notifications.findIndex(n => n.id === req.params.id);
-  
+
       if (notificationIndex === -1) {
         return res.status(404).json({ error: "Notification not found" });
       }
-  
+
       notifications[notificationIndex].read = true;
       await db.set(`notifications-${req.session.userinfo.id}`, notifications);
-  
+
       res.json({ success: true });
     } catch (error) {
       console.error("Error marking notification as read:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });
-  
+
   // Get ticket count for user
   app.get("/api/tickets/count", async (req, res) => {
     if (!req.session.pterodactyl) return res.status(401).json({ error: "Unauthorized" });
-  
+
     try {
       const tickets = await db.get('tickets') || [];
       const userTickets = tickets.filter(ticket => ticket.userId === req.session.userinfo.id);
-  
+
       const counts = {
         total: userTickets.length,
         open: userTickets.filter(t => t.status === 'open').length,
         closed: userTickets.filter(t => t.status === 'closed').length
       };
-  
+
       res.json(counts);
     } catch (error) {
       console.error("Error fetching ticket counts:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });
-  
+
   // Get recent activity for admin dashboard
   app.get("/api/tickets/activity", async (req, res) => {
     if (!await checkAdmin(req, res, settings, db)) {
       return res.status(403).json({ error: "Unauthorized" });
     }
-  
+
     try {
       const tickets = await db.get('tickets') || [];
       const activity = [];
-  
+
       // Get recent messages from all tickets
       tickets.forEach(ticket => {
         ticket.messages.forEach(message => {
@@ -153,73 +153,73 @@ module.exports.load = async function(app, db) {
           });
         });
       });
-  
+
       // Sort by timestamp descending and limit to 50 items
       activity.sort((a, b) => b.timestamp - a.timestamp);
       const recentActivity = activity.slice(0, 50);
-  
+
       res.json(recentActivity);
     } catch (error) {
       console.error("Error fetching ticket activity:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });
-  
+
   // Search tickets (admin only)
   app.get("/api/tickets/search", async (req, res) => {
     if (!await checkAdmin(req, res, settings, db)) {
       return res.status(403).json({ error: "Unauthorized" });
     }
-  
+
     try {
       const { query, status, priority, category } = req.query;
       let tickets = await db.get('tickets') || [];
-  
+
       // Apply filters
       if (query) {
         const searchQuery = query.toLowerCase();
-        tickets = tickets.filter(ticket => 
+        tickets = tickets.filter(ticket =>
           ticket.subject.toLowerCase().includes(searchQuery) ||
           ticket.messages.some(msg => msg.content.toLowerCase().includes(searchQuery))
         );
       }
-  
+
       if (status) {
         tickets = tickets.filter(ticket => ticket.status === status);
       }
-  
+
       if (priority) {
         tickets = tickets.filter(ticket => ticket.priority === priority);
       }
-  
+
       if (category) {
         tickets = tickets.filter(ticket => ticket.category === category);
       }
-  
+
       // Format tickets for display
       const formattedTickets = tickets.map(ticket => formatTicketForDisplay(ticket, false));
-  
+
       res.json(formattedTickets);
     } catch (error) {
       console.error("Error searching tickets:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });
-  
+
   // Export tickets to CSV (admin only)
   app.get("/api/tickets/export", async (req, res) => {
     if (!await checkAdmin(req, res, settings, db)) {
       return res.status(403).json({ error: "Unauthorized" });
     }
-  
+
     try {
       const tickets = await db.get('tickets') || [];
       let csv = 'Ticket ID,Subject,Status,Priority,Category,Created,Updated,Messages\n';
-  
+
       tickets.forEach(ticket => {
         csv += `${ticket.id},${escapeCsvField(ticket.subject)},${ticket.status},${ticket.priority},${ticket.category},${new Date(ticket.created).toISOString()},${new Date(ticket.updated).toISOString()},${ticket.messages.length}\n`;
       });
-  
+
       res.setHeader('Content-Type', 'text/csv');
       res.setHeader('Content-Disposition', 'attachment; filename=tickets.csv');
       res.send(csv);
@@ -228,7 +228,7 @@ module.exports.load = async function(app, db) {
       res.status(500).json({ error: "Internal server error" });
     }
   });
-  
+
   // Helper function to escape CSV fields
   function escapeCsvField(field) {
     if (typeof field !== 'string') return field;
@@ -309,7 +309,7 @@ module.exports.load = async function(app, db) {
 
     try {
       const tickets = await db.get('tickets') || [];
-      
+
       // Add user information to each ticket
       const ticketsWithUserInfo = await Promise.all(tickets.map(async (ticket) => {
         const userInfo = await fetch(
@@ -509,7 +509,7 @@ module.exports.load = async function(app, db) {
     try {
       const { priority } = req.body;
       const validPriorities = ['low', 'medium', 'high', 'urgent'];
-      
+
       if (!priority || !validPriorities.includes(priority.toLowerCase())) {
         return res.status(400).json({ error: "Invalid priority level" });
       }
@@ -558,74 +558,74 @@ module.exports.load = async function(app, db) {
 
 // Helper function to calculate average response time
 function calculateAverageResponseTime(tickets) {
-    let totalResponseTime = 0;
-    let responsesCount = 0;
-  
-    tickets.forEach(ticket => {
-      if (ticket.messages.length > 1) {
-        for (let i = 1; i < ticket.messages.length; i++) {
-          const currentMessage = ticket.messages[i];
-          const previousMessage = ticket.messages[i - 1];
-  
-          // Only count response time if messages are from different users
-          if (currentMessage.userId !== previousMessage.userId) {
-            totalResponseTime += currentMessage.timestamp - previousMessage.timestamp;
-            responsesCount++;
-          }
+  let totalResponseTime = 0;
+  let responsesCount = 0;
+
+  tickets.forEach(ticket => {
+    if (ticket.messages.length > 1) {
+      for (let i = 1; i < ticket.messages.length; i++) {
+        const currentMessage = ticket.messages[i];
+        const previousMessage = ticket.messages[i - 1];
+
+        // Only count response time if messages are from different users
+        if (currentMessage.userId !== previousMessage.userId) {
+          totalResponseTime += currentMessage.timestamp - previousMessage.timestamp;
+          responsesCount++;
         }
       }
-    });
-  
-    return responsesCount > 0 ? Math.floor(totalResponseTime / responsesCount) : 0;
-  }
-  
-  // Helper function to format tickets for display
-  function formatTicketForDisplay(ticket, includeMessages = true) {
-    const displayTicket = {
-      id: ticket.id,
-      subject: ticket.subject,
-      status: ticket.status,
-      priority: ticket.priority,
-      category: ticket.category,
-      created: ticket.created,
-      updated: ticket.updated,
-      displayId: ticket.id.slice(0, 8).toUpperCase(),
-      timeAgo: getTimeAgo(ticket.updated)
-    };
-  
-    if (includeMessages) {
-      displayTicket.messages = ticket.messages.map(msg => ({
-        id: msg.id,
-        content: msg.content,
-        timestamp: msg.timestamp,
-        timeAgo: getTimeAgo(msg.timestamp),
-        isStaff: msg.isStaff,
-        isSystem: msg.isSystem
-      }));
     }
-  
-    return displayTicket;
+  });
+
+  return responsesCount > 0 ? Math.floor(totalResponseTime / responsesCount) : 0;
+}
+
+// Helper function to format tickets for display
+function formatTicketForDisplay(ticket, includeMessages = true) {
+  const displayTicket = {
+    id: ticket.id,
+    subject: ticket.subject,
+    status: ticket.status,
+    priority: ticket.priority,
+    category: ticket.category,
+    created: ticket.created,
+    updated: ticket.updated,
+    displayId: ticket.id.slice(0, 8).toUpperCase(),
+    timeAgo: getTimeAgo(ticket.updated)
+  };
+
+  if (includeMessages) {
+    displayTicket.messages = ticket.messages.map(msg => ({
+      id: msg.id,
+      content: msg.content,
+      timestamp: msg.timestamp,
+      timeAgo: getTimeAgo(msg.timestamp),
+      isStaff: msg.isStaff,
+      isSystem: msg.isSystem
+    }));
   }
-  
-  // Helper function to get time ago string
-  function getTimeAgo(timestamp) {
-    const seconds = Math.floor((Date.now() - timestamp) / 1000);
-  
-    const intervals = {
-      year: 31536000,
-      month: 2592000,
-      week: 604800,
-      day: 86400,
-      hour: 3600,
-      minute: 60
-    };
-  
-    for (const [unit, secondsInUnit] of Object.entries(intervals)) {
-      const interval = Math.floor(seconds / secondsInUnit);
-      if (interval >= 1) {
-        return interval === 1 ? `1 ${unit} ago` : `${interval} ${unit}s ago`;
-      }
+
+  return displayTicket;
+}
+
+// Helper function to get time ago string
+function getTimeAgo(timestamp) {
+  const seconds = Math.floor((Date.now() - timestamp) / 1000);
+
+  const intervals = {
+    year: 31536000,
+    month: 2592000,
+    week: 604800,
+    day: 86400,
+    hour: 3600,
+    minute: 60
+  };
+
+  for (const [unit, secondsInUnit] of Object.entries(intervals)) {
+    const interval = Math.floor(seconds / secondsInUnit);
+    if (interval >= 1) {
+      return interval === 1 ? `1 ${unit} ago` : `${interval} ${unit}s ago`;
     }
-  
-    return 'just now';
   }
+
+  return 'just now';
+}

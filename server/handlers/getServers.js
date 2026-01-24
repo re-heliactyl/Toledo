@@ -10,8 +10,8 @@ module.exports = () => {
       return (
         await fetch(
           settings.pterodactyl.domain +
-            "/api/application/servers/?page=" +
-            page,
+          "/api/application/servers/?page=" +
+          page,
           {
             headers: {
               Authorization: `Bearer ${settings.pterodactyl.key}`,

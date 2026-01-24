@@ -2,7 +2,12 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "HeliactylModule",
   "type": "object",
-  "required": ["name", "version", "api_level", "target_platform"],
+  "required": [
+    "name",
+    "version",
+    "api_level",
+    "target_platform"
+  ],
   "properties": {
     "name": {
       "type": "string",
@@ -26,7 +31,10 @@
       "description": "Brief description of what the module does"
     },
     "author": {
-      "type": ["string", "object"],
+      "type": [
+        "string",
+        "object"
+      ],
       "description": "Author name or object with author details",
       "properties": {
         "name": {
@@ -50,7 +58,10 @@
       "description": "List of module dependencies",
       "items": {
         "type": "object",
-        "required": ["name", "version"],
+        "required": [
+          "name",
+          "version"
+        ],
         "properties": {
           "name": {
             "type": "string",
@@ -73,7 +84,9 @@
       "description": "Permissions required by this module",
       "items": {
         "type": "string",
-        "enum": ["user"]
+        "enum": [
+          "user"
+        ]
       }
     },
     "routes": {
@@ -81,7 +94,10 @@
       "description": "Routes provided by this module",
       "items": {
         "type": "object",
-        "required": ["path", "method"],
+        "required": [
+          "path",
+          "method"
+        ],
         "properties": {
           "path": {
             "type": "string",
@@ -89,7 +105,14 @@
           },
           "method": {
             "type": "string",
-            "enum": ["GET", "POST", "PUT", "DELETE", "PATCH", "WS"],
+            "enum": [
+              "GET",
+              "POST",
+              "PUT",
+              "DELETE",
+              "PATCH",
+              "WS"
+            ],
             "description": "HTTP method for this route"
           },
           "description": {

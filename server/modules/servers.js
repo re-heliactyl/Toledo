@@ -15,25 +15,25 @@ if (settings.pterodactyl?.domain?.slice(-1) === '/') {
 /* Heliactyl Next Module                                  */
 /* --------------------------------------------- */
 const HeliactylModule = {
-  "name": "Servers",
-  "version": "1.0.0",
-  "api_level": 4,
-  "target_platform": "10.0.0",
-  "description": "Core module",
-  "author": {
-    "name": "Matt James",
-    "email": "me@ether.pizza",
-    "url": "https://ether.pizza"
-  },
-  "dependencies": [],
-  "permissions": [],
-  "routes": [],
-  "config": {},
-  "hooks": [],
-  "tags": ['core'],
-  "license": "MIT"
+    "name": "Servers",
+    "version": "1.0.0",
+    "api_level": 4,
+    "target_platform": "10.0.0",
+    "description": "Core module",
+    "author": {
+        "name": "Matt James",
+        "email": "me@ether.pizza",
+        "url": "https://ether.pizza"
+    },
+    "dependencies": [],
+    "permissions": [],
+    "routes": [],
+    "config": {},
+    "hooks": [],
+    "tags": ['core'],
+    "license": "MIT"
 };
-  
+
 module.exports.HeliactylModule = HeliactylModule;
 
 // Rate limiters
@@ -50,7 +50,7 @@ async function checkUserResources(userId, db, additionalResources = { ram: 0, di
     const packageName = await db.get(`package-${userId}`);
     const package = settings.api.client.packages.list[packageName || settings.api.client.packages.default];
     const extra = await db.get(`extra-${userId}`) || { ram: 0, disk: 0, cpu: 0, servers: 0 };
-    
+
     const userServers = await getPteroUser(userId, db);
     if (!userServers) throw new Error('Failed to fetch user servers');
 
@@ -81,7 +81,7 @@ async function checkUserResources(userId, db, additionalResources = { ram: 0, di
 // Main module export
 module.exports.load = async function (app, db) {
     const router = express.Router();
-    
+
     // Middleware to check authentication
     router.use((req, res, next) => {
         if (!req.session.pterodactyl) {
@@ -92,123 +92,123 @@ module.exports.load = async function (app, db) {
 
     router.get('/eggs', async (req, res) => {
         try {
-          // Get package name for restriction checking
-          const packageName = await db.get(`package-${req.session.userinfo.id}`);
-          const userPackage = settings.api.client.packages.list[packageName || settings.api.client.packages.default];
-    
-          // Filter and format eggs
-          const eggs = Object.entries(settings.api.client.eggs).map(([id, egg]) => {
-            // Check if egg is restricted to specific packages
-            if (egg.package && !egg.package.includes(packageName || settings.api.client.packages.default)) {
-              return null;
-            }
-    
-            return {
-              id,
-              name: egg.display || id,
-              description: egg.description,
-              minimum: {
-                ram: egg.minimum?.ram || 0,
-                disk: egg.minimum?.disk || 0,
-                cpu: egg.minimum?.cpu || 0
-              },
-              maximum: egg.maximum || null,
-              info: egg.info || {},
-              startup: egg.info?.startup || '',
-              image: egg.info?.image || '',
-              requirements: {
-                ram: Math.max(egg.minimum?.ram || 0, 1),
-                disk: Math.max(egg.minimum?.disk || 0, 1),
-                cpu: Math.max(egg.minimum?.cpu || 0, 1)
-              }
-            };
-          }).filter(Boolean);
-    
-          res.json(eggs);
+            // Get package name for restriction checking
+            const packageName = await db.get(`package-${req.session.userinfo.id}`);
+            const userPackage = settings.api.client.packages.list[packageName || settings.api.client.packages.default];
+
+            // Filter and format eggs
+            const eggs = Object.entries(settings.api.client.eggs).map(([id, egg]) => {
+                // Check if egg is restricted to specific packages
+                if (egg.package && !egg.package.includes(packageName || settings.api.client.packages.default)) {
+                    return null;
+                }
+
+                return {
+                    id,
+                    name: egg.display || id,
+                    description: egg.description,
+                    minimum: {
+                        ram: egg.minimum?.ram || 0,
+                        disk: egg.minimum?.disk || 0,
+                        cpu: egg.minimum?.cpu || 0
+                    },
+                    maximum: egg.maximum || null,
+                    info: egg.info || {},
+                    startup: egg.info?.startup || '',
+                    image: egg.info?.image || '',
+                    requirements: {
+                        ram: Math.max(egg.minimum?.ram || 0, 1),
+                        disk: Math.max(egg.minimum?.disk || 0, 1),
+                        cpu: Math.max(egg.minimum?.cpu || 0, 1)
+                    }
+                };
+            }).filter(Boolean);
+
+            res.json(eggs);
         } catch (error) {
-          console.error('Error fetching eggs:', error);
-          res.status(500).json({ error: 'Failed to fetch eggs' });
+            console.error('Error fetching eggs:', error);
+            res.status(500).json({ error: 'Failed to fetch eggs' });
         }
-      });
-    
-      // GET /api/locations - List all available locations
-      router.get('/locations', async (req, res) => {
+    });
+
+    // GET /api/locations - List all available locations
+    router.get('/locations', async (req, res) => {
         try {
-          // Get package name for restriction checking
-          const packageName = await db.get(`package-${req.session.userinfo.id}`);
-          const userPackage = settings.api.client.packages.list[packageName || settings.api.client.packages.default];
-    
-          // Filter and format locations
-          const locations = Object.entries(settings.api.client.locations).map(([id, location]) => {
-            // Check if location is restricted to specific packages
-            if (location.package && !location.package.includes(packageName || settings.api.client.packages.default)) {
-              return null;
-            }
-    
-            return {
-              id,
-              name: location.name || id,
-              description: location.description,
-              full: location.full || false,
-              flags: location.flags || []
-            };
-          }).filter(Boolean);
-    
-          res.json(locations);
+            // Get package name for restriction checking
+            const packageName = await db.get(`package-${req.session.userinfo.id}`);
+            const userPackage = settings.api.client.packages.list[packageName || settings.api.client.packages.default];
+
+            // Filter and format locations
+            const locations = Object.entries(settings.api.client.locations).map(([id, location]) => {
+                // Check if location is restricted to specific packages
+                if (location.package && !location.package.includes(packageName || settings.api.client.packages.default)) {
+                    return null;
+                }
+
+                return {
+                    id,
+                    name: location.name || id,
+                    description: location.description,
+                    full: location.full || false,
+                    flags: location.flags || []
+                };
+            }).filter(Boolean);
+
+            res.json(locations);
         } catch (error) {
-          console.error('Error fetching locations:', error);
-          res.status(500).json({ error: 'Failed to fetch locations' });
+            console.error('Error fetching locations:', error);
+            res.status(500).json({ error: 'Failed to fetch locations' });
         }
-      });
+    });
 
     // GET /api/resources - Get user's resource usage and limits
     router.get('/resources', async (req, res) => {
-      try {
-          // Get package information
-          const packageName = await db.get(`package-${req.session.userinfo.id}`);
-          const package = settings.api.client.packages.list[packageName || settings.api.client.packages.default];
-          
-          // Get extra resources
-          const extra = await db.get(`extra-${req.session.userinfo.id}`) || {
-              ram: 0,
-              disk: 0,
-              cpu: 0,
-              servers: 0
-          };
+        try {
+            // Get package information
+            const packageName = await db.get(`package-${req.session.userinfo.id}`);
+            const package = settings.api.client.packages.list[packageName || settings.api.client.packages.default];
 
-          // Get current resource usage
-          const resources = await checkUserResources(req.session.userinfo.id, db);
+            // Get extra resources
+            const extra = await db.get(`extra-${req.session.userinfo.id}`) || {
+                ram: 0,
+                disk: 0,
+                cpu: 0,
+                servers: 0
+            };
 
-          // Calculate percentages
-          const percentages = {
-              ram: (resources.used.ram / (package.ram + extra.ram)) * 100,
-              disk: (resources.used.disk / (package.disk + extra.disk)) * 100,
-              cpu: (resources.used.cpu / (package.cpu + extra.cpu)) * 100,
-              servers: (resources.used.servers / (package.servers + extra.servers)) * 100
-          };
+            // Get current resource usage
+            const resources = await checkUserResources(req.session.userinfo.id, db);
 
-          res.json({
-              package: {
-                  name: packageName || settings.api.client.packages.default,
-                  ...package
-              },
-              extra,
-              current: {
-                  ...resources.used,
-                  percentages
-              },
-              limits: {
-                  ...resources.allowed
-              },
-              remaining: {
-                  ...resources.remaining
-              }
-          });
-      } catch (error) {
-          console.error('Error fetching resources:', error);
-          res.status(500).json({ error: 'Failed to fetch resource information' });
-      }
-  });
+            // Calculate percentages
+            const percentages = {
+                ram: (resources.used.ram / (package.ram + extra.ram)) * 100,
+                disk: (resources.used.disk / (package.disk + extra.disk)) * 100,
+                cpu: (resources.used.cpu / (package.cpu + extra.cpu)) * 100,
+                servers: (resources.used.servers / (package.servers + extra.servers)) * 100
+            };
+
+            res.json({
+                package: {
+                    name: packageName || settings.api.client.packages.default,
+                    ...package
+                },
+                extra,
+                current: {
+                    ...resources.used,
+                    percentages
+                },
+                limits: {
+                    ...resources.allowed
+                },
+                remaining: {
+                    ...resources.remaining
+                }
+            });
+        } catch (error) {
+            console.error('Error fetching resources:', error);
+            res.status(500).json({ error: 'Failed to fetch resource information' });
+        }
+    });
 
     // GET /api/servers - List all servers
     router.get('/servers', async (req, res) => {
@@ -230,413 +230,413 @@ module.exports.load = async function (app, db) {
             const server = user.attributes.relationships.servers.data.find(
                 s => s.attributes.id === req.params.id
             );
-            
+
             if (!server) {
                 return res.status(404).json({ error: 'Server not found' });
             }
-            
+
             res.json(server);
         } catch (error) {
             res.status(500).json({ error: 'Failed to fetch server' });
         }
     });
 
-// POST /api/v5/servers - Create new server
-router.post('/servers', async (req, res) => {
-    try {
-        if (!req.session.pterodactyl) return res.status(401).json({ error: 'Unauthorized' });
+    // POST /api/v5/servers - Create new server
+    router.post('/servers', async (req, res) => {
+        try {
+            if (!req.session.pterodactyl) return res.status(401).json({ error: 'Unauthorized' });
 
-        const { name, egg, location, ram, disk, cpu } = req.body;
+            const { name, egg, location, ram, disk, cpu } = req.body;
 
-        // Validate required fields
-        if (!name?.trim()) return res.status(400).json({ error: 'Server name is required' });
-        if (!egg) return res.status(400).json({ error: 'Server type is required' });
-        if (!location) return res.status(400).json({ error: 'Location is required' });
-        if (!ram || !disk || !cpu) return res.status(400).json({ error: 'Resource values are required' });
+            // Validate required fields
+            if (!name?.trim()) return res.status(400).json({ error: 'Server name is required' });
+            if (!egg) return res.status(400).json({ error: 'Server type is required' });
+            if (!location) return res.status(400).json({ error: 'Location is required' });
+            if (!ram || !disk || !cpu) return res.status(400).json({ error: 'Resource values are required' });
 
-        // Get user's current resource usage and limits
-        const user = await getPteroUser(req.session.userinfo.id, db);
-        const packageName = await db.get(`package-${req.session.userinfo.id}`);
-        const package = settings.api.client.packages.list[packageName || settings.api.client.packages.default];
-        const extra = await db.get(`extra-${req.session.userinfo.id}`) || {
-            ram: 0,
-            disk: 0,
-            cpu: 0,
-            servers: 0
-        };
+            // Get user's current resource usage and limits
+            const user = await getPteroUser(req.session.userinfo.id, db);
+            const packageName = await db.get(`package-${req.session.userinfo.id}`);
+            const package = settings.api.client.packages.list[packageName || settings.api.client.packages.default];
+            const extra = await db.get(`extra-${req.session.userinfo.id}`) || {
+                ram: 0,
+                disk: 0,
+                cpu: 0,
+                servers: 0
+            };
 
-        // Calculate current usage
-        const usage = user.attributes.relationships.servers.data.reduce((acc, server) => ({
-            ram: acc.ram + server.attributes.limits.memory,
-            disk: acc.disk + server.attributes.limits.disk,
-            cpu: acc.cpu + server.attributes.limits.cpu,
-            servers: acc.servers + 1
-        }), { ram: 0, disk: 0, cpu: 0, servers: 0 });
+            // Calculate current usage
+            const usage = user.attributes.relationships.servers.data.reduce((acc, server) => ({
+                ram: acc.ram + server.attributes.limits.memory,
+                disk: acc.disk + server.attributes.limits.disk,
+                cpu: acc.cpu + server.attributes.limits.cpu,
+                servers: acc.servers + 1
+            }), { ram: 0, disk: 0, cpu: 0, servers: 0 });
 
-        // Check resource limits
-        if (usage.servers >= package.servers + extra.servers) {
-            return res.status(400).json({ error: 'Server limit reached' });
-        }
-        if (usage.ram + ram > package.ram + extra.ram) {
-            return res.status(400).json({ error: 'Insufficient RAM available' });
-        }
-        if (usage.disk + disk > package.disk + extra.disk) {
-            return res.status(400).json({ error: 'Insufficient disk space available' });
-        }
-        if (usage.cpu + cpu > package.cpu + extra.cpu) {
-            return res.status(400).json({ error: 'Insufficient CPU available' });
-        }
-
-        // Get egg configuration
-        const eggInfo = settings.api.client.eggs[egg];
-        if (!eggInfo) {
-            return res.status(400).json({ error: 'Invalid egg specified' });
-        }
-
-        // Validate against egg minimums
-        if (eggInfo.minimum) {
-            if (ram < eggInfo.minimum.ram) {
-                return res.status(400).json({ error: `Minimum RAM required is ${eggInfo.minimum.ram}MB` });
+            // Check resource limits
+            if (usage.servers >= package.servers + extra.servers) {
+                return res.status(400).json({ error: 'Server limit reached' });
             }
-            if (disk < eggInfo.minimum.disk) {
-                return res.status(400).json({ error: `Minimum disk required is ${eggInfo.minimum.disk}MB` });
+            if (usage.ram + ram > package.ram + extra.ram) {
+                return res.status(400).json({ error: 'Insufficient RAM available' });
             }
-            if (cpu < eggInfo.minimum.cpu) {
-                return res.status(400).json({ error: `Minimum CPU required is ${eggInfo.minimum.cpu}%` });
+            if (usage.disk + disk > package.disk + extra.disk) {
+                return res.status(400).json({ error: 'Insufficient disk space available' });
             }
-        }
-
-        // Create server specification
-        const serverSpec = {
-            name: name.trim(),
-            user: await db.get(`users-${req.session.userinfo.id}`),
-            egg: eggInfo.info.egg,
-            docker_image: eggInfo.info.docker_image,
-            startup: eggInfo.info.startup,
-            environment: eggInfo.info.environment,
-            limits: {
-                memory: ram,
-                swap: -1,
-                disk: disk,
-                io: 500,
-                cpu: cpu
-            },
-            feature_limits: {
-                databases: 4,
-                backups: 4,
-                allocations: 10
-            },
-            deploy: {
-                locations: [location],
-                dedicated_ip: false,
-                port_range: []
+            if (usage.cpu + cpu > package.cpu + extra.cpu) {
+                return res.status(400).json({ error: 'Insufficient CPU available' });
             }
-        };
 
-        // Create server on Pterodactyl
-        const response = await fetch(
-            `${settings.pterodactyl.domain}/api/application/servers`,
-            {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${settings.pterodactyl.key}`,
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify(serverSpec)
+            // Get egg configuration
+            const eggInfo = settings.api.client.eggs[egg];
+            if (!eggInfo) {
+                return res.status(400).json({ error: 'Invalid egg specified' });
             }
-        );
 
-        if (!response.ok) {
-            const error = await response.json();
-            console.error('Pterodactyl API Error:', error);
-            return res.status(400).json(error);
-        }
-
-        const server = await response.json();
-
-        // Log server creation
-        log('server_created',
-            `User ${req.session.userinfo.username} created server "${name}" ` +
-            `(RAM: ${ram}MB, CPU: ${cpu}%, Disk: ${disk}MB)`
-        );
-
-        res.status(201).json(server);
-    } catch (error) {
-        console.error('Error creating server:', error);
-        res.status(500).json({ error: 'Failed to create server' });
-    }
-});
-
-// PATCH /api/v5/servers/:idOrIdentifier - Modify server
-router.patch('/servers/:idOrIdentifier', async (req, res) => {
-    try {
-        if (!req.session.pterodactyl) return res.status(401).json({ error: 'Unauthorized' });
-
-        const { ram, disk, cpu } = req.body;
-        const idOrIdentifier = req.params.idOrIdentifier;
-        
-        // Validate input
-        if (!ram || !disk || !cpu) {
-            return res.status(400).json({ error: 'Missing required resource values' });
-        }
-
-        // Get user's current resources and limits
-        const user = await getPteroUser(req.session.userinfo.id, db);
-        const packageName = await db.get(`package-${req.session.userinfo.id}`);
-        const package = settings.api.client.packages.list[packageName || settings.api.client.packages.default];
-        const extra = await db.get(`extra-${req.session.userinfo.id}`) || {
-            ram: 0,
-            disk: 0,
-            cpu: 0,
-            servers: 0
-        };
-
-        // Find server by ID or identifier
-        let server;
-        let serverId;
-
-        // Try to find the server in user's servers
-        server = user.attributes.relationships.servers.data.find(
-            s => s.attributes.id.toString() === idOrIdentifier || s.attributes.identifier === idOrIdentifier
-        );
-        
-        // If not found, fetch server list from Pterodactyl API to find by identifier
-        if (!server && !/^\d+$/.test(idOrIdentifier)) {
-            // Fetch servers from Pterodactyl API
-            const response = await fetch(
-                `${settings.pterodactyl.domain}/api/application/servers?per_page=100000`,
-                {
-                    headers: {
-                        'Authorization': `Bearer ${settings.pterodactyl.key}`,
-                        'Accept': 'application/json'
-                    }
+            // Validate against egg minimums
+            if (eggInfo.minimum) {
+                if (ram < eggInfo.minimum.ram) {
+                    return res.status(400).json({ error: `Minimum RAM required is ${eggInfo.minimum.ram}MB` });
                 }
-            );
-            
-            if (!response.ok) {
-                return res.status(500).json({ error: 'Failed to fetch servers from Pterodactyl' });
-            }
-            
-            const allServers = await response.json();
-            
-            // Find server with matching identifier
-            const matchingServer = allServers.data.find(s => s.attributes.identifier === idOrIdentifier);
-            
-            if (matchingServer) {
-                // Check if this server belongs to the user
-                server = user.attributes.relationships.servers.data.find(
-                    s => s.attributes.id.toString() === matchingServer.attributes.id.toString()
-                );
-                
-                if (server) {
-                    serverId = matchingServer.attributes.id;
+                if (disk < eggInfo.minimum.disk) {
+                    return res.status(400).json({ error: `Minimum disk required is ${eggInfo.minimum.disk}MB` });
+                }
+                if (cpu < eggInfo.minimum.cpu) {
+                    return res.status(400).json({ error: `Minimum CPU required is ${eggInfo.minimum.cpu}%` });
                 }
             }
-        } else if (server) {
-            serverId = server.attributes.id;
-        }
-        
-        if (!server || !serverId) {
-            return res.status(404).json({ error: 'Server not found or not owned by you' });
-        }
 
-        // Calculate current usage excluding the server being modified
-        const usage = user.attributes.relationships.servers.data.reduce((acc, s) => {
-            if (s.attributes.id.toString() !== serverId.toString()) {
-                return {
-                    ram: acc.ram + s.attributes.limits.memory,
-                    disk: acc.disk + s.attributes.limits.disk,
-                    cpu: acc.cpu + s.attributes.limits.cpu
-                };
-            }
-            return acc;
-        }, { ram: 0, disk: 0, cpu: 0 });
-
-        // Check resource limits with new values
-        if (usage.ram + ram > package.ram + extra.ram) {
-            return res.status(400).json({ 
-                error: `Insufficient RAM. Maximum available is ${package.ram + extra.ram - usage.ram}MB` 
-            });
-        }
-        if (usage.disk + disk > package.disk + extra.disk) {
-            return res.status(400).json({ 
-                error: `Insufficient disk space. Maximum available is ${package.disk + extra.disk - usage.disk}MB` 
-            });
-        }
-        if (usage.cpu + cpu > package.cpu + extra.cpu) {
-            return res.status(400).json({ 
-                error: `Insufficient CPU. Maximum available is ${package.cpu + extra.cpu - usage.cpu}%` 
-            });
-        }
-
-        // Get egg configuration to check minimums
-        let eggInfo = null;
-        for (const [_, egg] of Object.entries(settings.api.client.eggs)) {
-            if (egg.info.egg === server.attributes.egg) {
-                eggInfo = egg;
-                break;
-            }
-        }
-
-        if (eggInfo?.minimum) {
-            if (ram < eggInfo.minimum.ram) {
-                return res.status(400).json({ error: `Minimum RAM required is ${eggInfo.minimum.ram}MB` });
-            }
-            if (disk < eggInfo.minimum.disk) {
-                return res.status(400).json({ error: `Minimum disk required is ${eggInfo.minimum.disk}MB` });
-            }
-            if (cpu < eggInfo.minimum.cpu) {
-                return res.status(400).json({ error: `Minimum CPU required is ${eggInfo.minimum.cpu}%` });
-            }
-        }
-
-        // Send update request to Pterodactyl
-        const patchResponse = await fetch(
-            `${settings.pterodactyl.domain}/api/application/servers/${serverId}/build`,
-            {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${settings.pterodactyl.key}`,
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({
-                    allocation: server.attributes.allocation,
+            // Create server specification
+            const serverSpec = {
+                name: name.trim(),
+                user: await db.get(`users-${req.session.userinfo.id}`),
+                egg: eggInfo.info.egg,
+                docker_image: eggInfo.info.docker_image,
+                startup: eggInfo.info.startup,
+                environment: eggInfo.info.environment,
+                limits: {
                     memory: ram,
-                    swap: server.attributes.limits.swap,
+                    swap: -1,
                     disk: disk,
-                    io: server.attributes.limits.io,
-                    cpu: cpu,
-                    feature_limits: server.attributes.feature_limits
-                })
-            }
-        );
+                    io: 500,
+                    cpu: cpu
+                },
+                feature_limits: {
+                    databases: 4,
+                    backups: 4,
+                    allocations: 10
+                },
+                deploy: {
+                    locations: [location],
+                    dedicated_ip: false,
+                    port_range: []
+                }
+            };
 
-        if (!patchResponse.ok) {
-            const error = await patchResponse.json();
-            return res.status(400).json(error);
-        }
-
-        const updatedServer = await patchResponse.json();
-        
-        // Log the modification
-        log('server_modified',
-            `User ${req.session.userinfo.username} modified server "${server.attributes.name}" ` +
-            `(RAM: ${ram}MB, CPU: ${cpu}%, Disk: ${disk}MB)`
-        );
-
-        res.json(updatedServer);
-    } catch (error) {
-        console.error('Error modifying server:', error);
-        res.status(500).json({ error: 'Failed to modify server' });
-    }
-});
-
-// DELETE /api/v5/servers/:idOrIdentifier - Delete server
-router.delete('/servers/:idOrIdentifier', async (req, res) => {
-    try {
-        if (!req.session.pterodactyl) return res.status(401).json({ error: 'Unauthorized' });
-
-        const idOrIdentifier = req.params.idOrIdentifier;
-        
-        // Get user's current resources and servers
-        const user = await getPteroUser(req.session.userinfo.id, db);
-        if (!user) {
-            return res.status(404).json({ error: 'User not found' });
-        }
-
-        // Find server by ID or identifier
-        let server;
-        let serverId;
-
-        // Try to find the server in user's servers
-        server = user.attributes.relationships.servers.data.find(
-            s => s.attributes.id.toString() === idOrIdentifier || s.attributes.identifier === idOrIdentifier
-        );
-        
-        // If not found by user's servers and it's not a numeric ID, fetch all servers to find by identifier
-        if (!server && !/^\d+$/.test(idOrIdentifier)) {
-            // Fetch servers from Pterodactyl API
+            // Create server on Pterodactyl
             const response = await fetch(
-                `${settings.pterodactyl.domain}/api/application/servers?per_page=100000`,
+                `${settings.pterodactyl.domain}/api/application/servers`,
                 {
+                    method: 'POST',
                     headers: {
+                        'Content-Type': 'application/json',
                         'Authorization': `Bearer ${settings.pterodactyl.key}`,
                         'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(serverSpec)
+                }
+            );
+
+            if (!response.ok) {
+                const error = await response.json();
+                console.error('Pterodactyl API Error:', error);
+                return res.status(400).json(error);
+            }
+
+            const server = await response.json();
+
+            // Log server creation
+            log('server_created',
+                `User ${req.session.userinfo.username} created server "${name}" ` +
+                `(RAM: ${ram}MB, CPU: ${cpu}%, Disk: ${disk}MB)`
+            );
+
+            res.status(201).json(server);
+        } catch (error) {
+            console.error('Error creating server:', error);
+            res.status(500).json({ error: 'Failed to create server' });
+        }
+    });
+
+    // PATCH /api/v5/servers/:idOrIdentifier - Modify server
+    router.patch('/servers/:idOrIdentifier', async (req, res) => {
+        try {
+            if (!req.session.pterodactyl) return res.status(401).json({ error: 'Unauthorized' });
+
+            const { ram, disk, cpu } = req.body;
+            const idOrIdentifier = req.params.idOrIdentifier;
+
+            // Validate input
+            if (!ram || !disk || !cpu) {
+                return res.status(400).json({ error: 'Missing required resource values' });
+            }
+
+            // Get user's current resources and limits
+            const user = await getPteroUser(req.session.userinfo.id, db);
+            const packageName = await db.get(`package-${req.session.userinfo.id}`);
+            const package = settings.api.client.packages.list[packageName || settings.api.client.packages.default];
+            const extra = await db.get(`extra-${req.session.userinfo.id}`) || {
+                ram: 0,
+                disk: 0,
+                cpu: 0,
+                servers: 0
+            };
+
+            // Find server by ID or identifier
+            let server;
+            let serverId;
+
+            // Try to find the server in user's servers
+            server = user.attributes.relationships.servers.data.find(
+                s => s.attributes.id.toString() === idOrIdentifier || s.attributes.identifier === idOrIdentifier
+            );
+
+            // If not found, fetch server list from Pterodactyl API to find by identifier
+            if (!server && !/^\d+$/.test(idOrIdentifier)) {
+                // Fetch servers from Pterodactyl API
+                const response = await fetch(
+                    `${settings.pterodactyl.domain}/api/application/servers?per_page=100000`,
+                    {
+                        headers: {
+                            'Authorization': `Bearer ${settings.pterodactyl.key}`,
+                            'Accept': 'application/json'
+                        }
+                    }
+                );
+
+                if (!response.ok) {
+                    return res.status(500).json({ error: 'Failed to fetch servers from Pterodactyl' });
+                }
+
+                const allServers = await response.json();
+
+                // Find server with matching identifier
+                const matchingServer = allServers.data.find(s => s.attributes.identifier === idOrIdentifier);
+
+                if (matchingServer) {
+                    // Check if this server belongs to the user
+                    server = user.attributes.relationships.servers.data.find(
+                        s => s.attributes.id.toString() === matchingServer.attributes.id.toString()
+                    );
+
+                    if (server) {
+                        serverId = matchingServer.attributes.id;
+                    }
+                }
+            } else if (server) {
+                serverId = server.attributes.id;
+            }
+
+            if (!server || !serverId) {
+                return res.status(404).json({ error: 'Server not found or not owned by you' });
+            }
+
+            // Calculate current usage excluding the server being modified
+            const usage = user.attributes.relationships.servers.data.reduce((acc, s) => {
+                if (s.attributes.id.toString() !== serverId.toString()) {
+                    return {
+                        ram: acc.ram + s.attributes.limits.memory,
+                        disk: acc.disk + s.attributes.limits.disk,
+                        cpu: acc.cpu + s.attributes.limits.cpu
+                    };
+                }
+                return acc;
+            }, { ram: 0, disk: 0, cpu: 0 });
+
+            // Check resource limits with new values
+            if (usage.ram + ram > package.ram + extra.ram) {
+                return res.status(400).json({
+                    error: `Insufficient RAM. Maximum available is ${package.ram + extra.ram - usage.ram}MB`
+                });
+            }
+            if (usage.disk + disk > package.disk + extra.disk) {
+                return res.status(400).json({
+                    error: `Insufficient disk space. Maximum available is ${package.disk + extra.disk - usage.disk}MB`
+                });
+            }
+            if (usage.cpu + cpu > package.cpu + extra.cpu) {
+                return res.status(400).json({
+                    error: `Insufficient CPU. Maximum available is ${package.cpu + extra.cpu - usage.cpu}%`
+                });
+            }
+
+            // Get egg configuration to check minimums
+            let eggInfo = null;
+            for (const [_, egg] of Object.entries(settings.api.client.eggs)) {
+                if (egg.info.egg === server.attributes.egg) {
+                    eggInfo = egg;
+                    break;
+                }
+            }
+
+            if (eggInfo?.minimum) {
+                if (ram < eggInfo.minimum.ram) {
+                    return res.status(400).json({ error: `Minimum RAM required is ${eggInfo.minimum.ram}MB` });
+                }
+                if (disk < eggInfo.minimum.disk) {
+                    return res.status(400).json({ error: `Minimum disk required is ${eggInfo.minimum.disk}MB` });
+                }
+                if (cpu < eggInfo.minimum.cpu) {
+                    return res.status(400).json({ error: `Minimum CPU required is ${eggInfo.minimum.cpu}%` });
+                }
+            }
+
+            // Send update request to Pterodactyl
+            const patchResponse = await fetch(
+                `${settings.pterodactyl.domain}/api/application/servers/${serverId}/build`,
+                {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${settings.pterodactyl.key}`,
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        allocation: server.attributes.allocation,
+                        memory: ram,
+                        swap: server.attributes.limits.swap,
+                        disk: disk,
+                        io: server.attributes.limits.io,
+                        cpu: cpu,
+                        feature_limits: server.attributes.feature_limits
+                    })
+                }
+            );
+
+            if (!patchResponse.ok) {
+                const error = await patchResponse.json();
+                return res.status(400).json(error);
+            }
+
+            const updatedServer = await patchResponse.json();
+
+            // Log the modification
+            log('server_modified',
+                `User ${req.session.userinfo.username} modified server "${server.attributes.name}" ` +
+                `(RAM: ${ram}MB, CPU: ${cpu}%, Disk: ${disk}MB)`
+            );
+
+            res.json(updatedServer);
+        } catch (error) {
+            console.error('Error modifying server:', error);
+            res.status(500).json({ error: 'Failed to modify server' });
+        }
+    });
+
+    // DELETE /api/v5/servers/:idOrIdentifier - Delete server
+    router.delete('/servers/:idOrIdentifier', async (req, res) => {
+        try {
+            if (!req.session.pterodactyl) return res.status(401).json({ error: 'Unauthorized' });
+
+            const idOrIdentifier = req.params.idOrIdentifier;
+
+            // Get user's current resources and servers
+            const user = await getPteroUser(req.session.userinfo.id, db);
+            if (!user) {
+                return res.status(404).json({ error: 'User not found' });
+            }
+
+            // Find server by ID or identifier
+            let server;
+            let serverId;
+
+            // Try to find the server in user's servers
+            server = user.attributes.relationships.servers.data.find(
+                s => s.attributes.id.toString() === idOrIdentifier || s.attributes.identifier === idOrIdentifier
+            );
+
+            // If not found by user's servers and it's not a numeric ID, fetch all servers to find by identifier
+            if (!server && !/^\d+$/.test(idOrIdentifier)) {
+                // Fetch servers from Pterodactyl API
+                const response = await fetch(
+                    `${settings.pterodactyl.domain}/api/application/servers?per_page=100000`,
+                    {
+                        headers: {
+                            'Authorization': `Bearer ${settings.pterodactyl.key}`,
+                            'Accept': 'application/json'
+                        }
+                    }
+                );
+
+                if (!response.ok) {
+                    return res.status(500).json({ error: 'Failed to fetch servers from Pterodactyl' });
+                }
+
+                const allServers = await response.json();
+
+                // Find server with matching identifier
+                const matchingServer = allServers.data.find(s => s.attributes.identifier === idOrIdentifier);
+
+                if (matchingServer) {
+                    // Check if this server belongs to the user
+                    server = user.attributes.relationships.servers.data.find(
+                        s => s.attributes.id.toString() === matchingServer.attributes.id.toString()
+                    );
+
+                    if (server) {
+                        serverId = matchingServer.attributes.id;
+                    }
+                }
+            } else if (server) {
+                serverId = server.attributes.id;
+            }
+
+            if (!server || !serverId) {
+                return res.status(404).json({ error: 'Server not found or not owned by you' });
+            }
+
+            // Check if server is suspended
+            const serverInfo = await fetch(
+                `${settings.pterodactyl.domain}/api/application/servers/${serverId}`,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${settings.pterodactyl.key}`
                     }
                 }
             );
-            
-            if (!response.ok) {
-                return res.status(500).json({ error: 'Failed to fetch servers from Pterodactyl' });
+
+            const serverData = await serverInfo.json();
+            if (serverData.attributes.suspended) {
+                return res.status(400).json({ error: 'Cannot delete suspended server' });
             }
-            
-            const allServers = await response.json();
-            
-            // Find server with matching identifier
-            const matchingServer = allServers.data.find(s => s.attributes.identifier === idOrIdentifier);
-            
-            if (matchingServer) {
-                // Check if this server belongs to the user
-                server = user.attributes.relationships.servers.data.find(
-                    s => s.attributes.id.toString() === matchingServer.attributes.id.toString()
-                );
-                
-                if (server) {
-                    serverId = matchingServer.attributes.id;
+
+            // Send delete request to Pterodactyl
+            const deleteResponse = await fetch(
+                `${settings.pterodactyl.domain}/api/application/servers/${serverId}/force`,
+                {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${settings.pterodactyl.key}`
+                    }
                 }
+            );
+
+            if (!deleteResponse.ok) {
+                const error = await deleteResponse.json();
+                return res.status(400).json(error);
             }
-        } else if (server) {
-            serverId = server.attributes.id;
+
+            // Log the deletion
+            log('server_deleted',
+                `User ${req.session.userinfo.username} deleted server "${server.attributes.name}"`
+            );
+
+            res.status(204).send();
+        } catch (error) {
+            console.error('Error deleting server:', error);
+            res.status(500).json({ error: 'Failed to delete server' });
         }
-        
-        if (!server || !serverId) {
-            return res.status(404).json({ error: 'Server not found or not owned by you' });
-        }
-
-        // Check if server is suspended
-        const serverInfo = await fetch(
-            `${settings.pterodactyl.domain}/api/application/servers/${serverId}`,
-            {
-                headers: {
-                    'Authorization': `Bearer ${settings.pterodactyl.key}`
-                }
-            }
-        );
-        
-        const serverData = await serverInfo.json();
-        if (serverData.attributes.suspended) {
-            return res.status(400).json({ error: 'Cannot delete suspended server' });
-        }
-
-        // Send delete request to Pterodactyl
-        const deleteResponse = await fetch(
-            `${settings.pterodactyl.domain}/api/application/servers/${serverId}/force`,
-            {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${settings.pterodactyl.key}`
-                }
-            }
-        );
-
-        if (!deleteResponse.ok) {
-            const error = await deleteResponse.json();
-            return res.status(400).json(error);
-        }
-
-        // Log the deletion
-        log('server_deleted',
-            `User ${req.session.userinfo.username} deleted server "${server.attributes.name}"`
-        );
-
-        res.status(204).send();
-    } catch (error) {
-        console.error('Error deleting server:', error);
-        res.status(500).json({ error: 'Failed to delete server' });
-    }
-});
+    });
 
     // Mount the router
     app.use('/api/v5/', router);
