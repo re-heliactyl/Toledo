@@ -1,4 +1,5 @@
 const { v4: uuidv4 } = require('uuid');
+const axios = require('axios');
 const loadConfig = require("../handlers/config.js");
 const settings = loadConfig("./config.toml");
 
@@ -21,6 +22,15 @@ const HeliactylModule = {
   "tags": ['core'],
   "license": "MIT"
 };
+
+// Pterodactyl API helper
+const pteroApi = axios.create({
+  baseURL: settings.pterodactyl.domain,
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${settings.pterodactyl.key}`
+  }
+});
 
 // Import SimpleWebAuthn
 const {
@@ -392,23 +402,8 @@ module.exports.load = async function (app, db) {
       // Fetch Pterodactyl data
       const pteroId = userData.pterodactyl_id;
       try {
-        const pteroResponse = await fetch(
-          `${settings.pterodactyl.domain}/api/application/users/${pteroId}?include=servers`,
-          {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${settings.pterodactyl.key}`,
-            },
-          }
-        );
-
-        if (!pteroResponse.ok) {
-          throw new Error(`Failed to fetch Pterodactyl data: ${pteroResponse.statusText}`);
-        }
-
-        const pteroData = await pteroResponse.json();
-        req.session.pterodactyl = pteroData.attributes;
+        const pteroResponse = await pteroApi.get(`/api/application/users/${pteroId}?include=servers`);
+        req.session.pterodactyl = pteroResponse.data.attributes;
       } catch (error) {
         console.error('Error fetching Pterodactyl data:', error);
         // Continue with login even if we can't get Pterodactyl data

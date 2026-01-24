@@ -8,9 +8,8 @@
     "@iarna/toml": "^2.2.5",
     "@keyv/sqlite": "^3.6.7",
     "@simplewebauthn/server": "^13.1.1",
-    "@tailwindcss/forms": "^0.5.7",
     "apicache": "^1.6.3",
-    "axios": "^1.7.7",
+    "axios": "^1.13.2",
     "bcrypt": "^5.1.1",
     "chalk": "^4.1.0",
     "chokidar": "^3.6.0",
@@ -21,7 +20,6 @@
     "cookie": "^1.0.1",
     "cookie-parser": "^1.4.6",
     "discord.js": "^14.17.3",
-    "ejs": "^3.1.7",
     "express": "^4.21.2",
     "express-openid-connect": "^2.17.1",
     "express-rate-limit": "^7.4.1",
@@ -42,7 +40,6 @@
     "mysql2": "^3.11.4",
     "nocache": "^4.0.0",
     "node-cache": "^5.1.2",
-    "node-fetch": "^2.6.6",
     "node-schedule": "^2.1.1",
     "ora": "^5.4.1",
     "passport": "^0.7.0",
@@ -69,8 +66,7 @@
     "db:build:macos": "cd Heliactyl Nextdb && cargo build --release && cp target/release/libHeliactyl Nextdb.dylib ../ffi/libHeliactyl Nextdb.dylib",
     "db:build:linux": "cd Heliactyl Nextdb && cargo build --release && cp target/release/libHeliactyl Nextdb.so ../ffi/libHeliactyl Nextdb.so",
     "db:build:windows": "cd Heliactyl Nextdb && cargo build --release && cp target/release/Heliactyl Nextdb.dll ../ffi/Heliactyl Nextdb.dll",
-    "start": "node --no-deprecation app.js",
-    "build": "npx tailwindcss -i ./assets/tw.conf -o ./assets/tailwind.css --watch"
+    "start": "node --no-deprecation app.js"
   },
   "devDependencies": {
     "@babel/cli": "^7.23.9",

@@ -312,21 +312,26 @@ async function sendCommandAndGetResponse(serverId, command, responseTimeout = 50
 
 // API request helper
 async function apiRequest(endpoint, method = "GET", body = null) {
-  const response = await fetch(`${PANEL_URL}/api/application${endpoint}`, {
-    method,
-    headers: {
-      Authorization: `Bearer ${API_KEY}`,
-      "Content-Type": "application/json",
-      Accept: "Application/vnd.pterodactyl.v1+json",
-    },
-    body: body ? JSON.stringify(body) : null,
-  });
+  try {
+    const config = {
+      method: method.toLowerCase(),
+      url: `${PANEL_URL}/api/application${endpoint}`,
+      headers: {
+        Authorization: `Bearer ${API_KEY}`,
+        "Content-Type": "application/json",
+        Accept: "Application/vnd.pterodactyl.v1+json",
+      },
+    };
 
-  if (!response.ok) {
-    throw new Error(`API request failed: ${await response.text()}`);
+    if (body) {
+      config.data = body;
+    }
+
+    const response = await axios(config);
+    return response.data;
+  } catch (error) {
+    throw new Error(`API request failed: ${error.response?.data ? JSON.stringify(error.response.data) : error.message}`);
   }
-
-  return response.json();
 }
 
 module.exports.load = async function (app, db) {

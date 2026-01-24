@@ -136,7 +136,7 @@ function SystemStats() {
                   {isLoading ? (
                     <div className="h-8 w-16 bg-neutral-800 animate-pulse rounded" />
                   ) : (
-                    {(stat.value || 0).toLocaleString()}
+                    (stat.value || 0).toLocaleString()
                   )}
                 </p>
               </div>

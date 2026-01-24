@@ -9,7 +9,8 @@ import {
   EllipsisHorizontalIcon, CircleStackIcon,
   ListBulletIcon, ArrowLeftIcon, ArrowTrendingUpIcon, GiftIcon,
   FingerPrintIcon, HomeIcon, BoltIcon, PaperAirplaneIcon, ArrowDownLeftIcon,
-  ChevronDownIcon, EllipsisVerticalIcon, LinkIcon
+  ChevronDownIcon, EllipsisVerticalIcon, LinkIcon,
+  ShieldCheckIcon, TicketIcon, SignalIcon
 } from '@heroicons/react/24/outline';
 
 // Sidebar context for visibility management
@@ -84,6 +85,7 @@ const MainLayout = () => {
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [menuDropdownOpen, setMenuDropdownOpen] = useState(false);
   const [serverName, setServerName] = useState("");
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const userDropdownRef = useRef(null);
   const menuDropdownRef = useRef(null);
@@ -188,6 +190,14 @@ const MainLayout = () => {
     { icon: ListBulletIcon, label: 'Logs', path: `/server/${id}/logs` }
   ];
 
+  const adminNavItems = [
+    { icon: WindowIcon, label: 'Overview', path: '/admin/overview' },
+    { icon: UsersIcon, label: 'Users', path: '/admin/users' },
+    { icon: ServerStackIcon, label: 'Nodes', path: '/admin/nodes' },
+    { icon: TicketIcon, label: 'Tickets', path: '/admin/tickets' },
+    { icon: SignalIcon, label: 'Radar', path: '/admin/radar' }
+  ];
+
   const menuItems = [
     { icon: <LinkIcon className="w-4 h-4" />, label: 'Panel', path: 'https://panel.mantle.lat', external: true },
     { icon: <ArrowRightOnRectangleIcon className="w-4 h-4" />, label: 'Logout', action: handleLogout, className: 'text-red-400 hover:text-red-300 hover:bg-red-950/30' }
@@ -197,11 +207,12 @@ const MainLayout = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [coinsResponse, userResponse, serversResponse, subuserServersResponse] = await Promise.all([
+        const [coinsResponse, userResponse, serversResponse, subuserServersResponse, adminResponse] = await Promise.all([
           axios.get('/api/coins'),
           axios.get('/api/user'),
           axios.get('/api/v5/servers'),
-          axios.get('/api/subuser-servers')
+          axios.get('/api/subuser-servers'),
+          axios.get('/api/admin').catch(() => ({ data: { admin: false } }))
         ]);
 
         setBalances({ coins: coinsResponse.data.coins || 0 });
@@ -213,6 +224,7 @@ const MainLayout = () => {
         });
         setServers(serversResponse.data || []);
         setSubuserServers(subuserServersResponse.data || []);
+        setIsAdmin(adminResponse.data.admin || false);
       } catch (error) {
         console.error('Error fetching data:', error);
       }
@@ -328,6 +340,25 @@ const MainLayout = () => {
                     </>
                   )}
                 </nav>
+
+                {/* Admin Section */}
+                {!showServerSection && isAdmin && (
+                  <>
+                    <SectionHeader label="Admin" />
+                    <nav className="py-1 px-3 space-y-0.5 relative">
+                      {adminNavItems.map((item) => (
+                        <NavItem
+                          key={item.label}
+                          to={item.path}
+                          icon={item.icon}
+                          label={item.label}
+                          isActive={isActivePath(item.path)}
+                          setRef={setTabRef}
+                        />
+                      ))}
+                    </nav>
+                  </>
+                )}
               </div>
 
               {/* Bottom Section with user profile moved here */}

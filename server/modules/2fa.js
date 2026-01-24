@@ -1,6 +1,7 @@
 const speakeasy = require('speakeasy');
 const qrcode = require('qrcode');
 const { v4: uuidv4 } = require('uuid');
+const axios = require('axios');
 const loadConfig = require("../handlers/config.js");
 const settings = loadConfig("./config.toml");
 
@@ -39,6 +40,15 @@ const HeliactylModule = {
   "tags": ['core'],
   "license": "MIT"
 };
+
+// Pterodactyl API helper
+const pteroApi = axios.create({
+  baseURL: settings.pterodactyl.domain,
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${settings.pterodactyl.key}`
+  }
+});
 
 // Generate backup codes
 function generateBackupCodes(count = 8) {
@@ -305,18 +315,8 @@ module.exports.load = async function (app, db) {
 
       // Fetch Pterodactyl data
       const pteroId = userData.pterodactyl_id;
-      const pteroData = await fetch(
-        `${settings.pterodactyl.domain}/api/application/users/${pteroId}?include=servers`,
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${settings.pterodactyl.key}`,
-          },
-        }
-      ).then(res => res.json());
-
-      req.session.pterodactyl = pteroData.attributes;
+      const pteroResponse = await pteroApi.get(`/api/application/users/${pteroId}?include=servers`);
+      req.session.pterodactyl = pteroResponse.data.attributes;
 
       // Add notification
       await addUserNotification(db, userId, {

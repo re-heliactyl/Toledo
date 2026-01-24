@@ -1,9 +1,3 @@
-const indexjs = require("../app.js");
-const adminjs = require("./admin.js");
-const fs = require("fs");
-const ejs = require("ejs");
-const fetch = require('node-fetch');
-
 const HeliactylModule = {
   "name": "Referrals",
   "version": "1.0.0",

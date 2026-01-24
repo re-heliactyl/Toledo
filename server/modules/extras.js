@@ -2,7 +2,7 @@ const loadConfig = require("../handlers/config.js");
 const settings = loadConfig("./config.toml");
 const fs = require("fs");
 const indexjs = require("../app.js");
-const fetch = require("node-fetch");
+const axios = require('axios');
 const Queue = require("../handlers/Queue.js");
 
 const HeliactylModule = {
@@ -25,6 +25,15 @@ const HeliactylModule = {
   "license": "MIT"
 };
 
+// Pterodactyl API helper
+const pteroApi = axios.create({
+  baseURL: settings.pterodactyl.domain,
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${settings.pterodactyl.key}`
+  }
+});
+
 /* Module */
 module.exports.HeliactylModule = HeliactylModule;
 module.exports.load = async function (app, db) {
@@ -38,23 +47,13 @@ module.exports.load = async function (app, db) {
     } else {
       let newpassword = makeid(settings.api.client.passwordgenerator["length"]);
 
-      await fetch(
-        settings.pterodactyl.domain + "/api/application/users/" + req.session.pterodactyl.id,
-        {
-          method: "patch",
-          headers: {
-            'Content-Type': 'application/json',
-            "Authorization": `Bearer ${settings.pterodactyl.key}`
-          },
-          body: JSON.stringify({
-            username: req.session.pterodactyl.username,
-            email: req.session.pterodactyl.email,
-            first_name: req.session.pterodactyl.first_name,
-            last_name: req.session.pterodactyl.last_name,
-            password: newpassword
-          })
-        }
-      );
+      await pteroApi.patch(`/api/application/users/${req.session.pterodactyl.id}`, {
+        username: req.session.pterodactyl.username,
+        email: req.session.pterodactyl.email,
+        first_name: req.session.pterodactyl.first_name,
+        last_name: req.session.pterodactyl.last_name,
+        password: newpassword
+      });
 
       await db.set("password-" + req.session.userinfo.id, newpassword)
       return res.json({ password: newpassword });
@@ -127,23 +126,13 @@ module.exports.load = async function (app, db) {
 
   // Helper function to update password
   async function updatePassword(userInfo, newPassword, settings, db) {
-    await fetch(
-      `${settings.pterodactyl.domain}/api/application/users/${userInfo.id}`,
-      {
-        method: "patch",
-        headers: {
-          'Content-Type': 'application/json',
-          "Authorization": `Bearer ${settings.pterodactyl.key}`
-        },
-        body: JSON.stringify({
-          username: userInfo.username,
-          email: userInfo.email,
-          first_name: userInfo.first_name,
-          last_name: userInfo.last_name,
-          password: newPassword
-        })
-      }
-    ).then(res => res.json());
+    await pteroApi.patch(`/api/application/users/${userInfo.id}`, {
+      username: userInfo.username,
+      email: userInfo.email,
+      first_name: userInfo.first_name,
+      last_name: userInfo.last_name,
+      password: newPassword
+    });
 
     await db.set("password-" + userInfo.id, newPassword);
   }

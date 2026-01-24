@@ -46,7 +46,6 @@ const settings = loadConfig("./config.toml");
 const db = new Database(settings.database);
 
 // Set up Express
-app.set('view engine', 'ejs');
 const wsInstance = require("express-ws")(app);
 
 // Apply websocket logging

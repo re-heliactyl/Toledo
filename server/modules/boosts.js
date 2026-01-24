@@ -1,3 +1,4 @@
+const axios = require('axios');
 const indexjs = require("../app.js");
 const fs = require("fs");
 const loadConfig = require("../handlers/config.js");
@@ -24,6 +25,16 @@ const HeliactylModule = {
 };
 
 module.exports.HeliactylModule = HeliactylModule;
+
+// Pterodactyl API helper
+const pteroApi = axios.create({
+  baseURL: settings.pterodactyl.domain,
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'Authorization': `Bearer ${settings.pterodactyl.key}`
+  }
+});
 
 class BoostError extends Error {
   constructor(message, code) {
@@ -628,34 +639,17 @@ class BoostManager {
   // Helper function to update server resources via Pterodactyl API
   async updateServerResources(serverId, newLimits) {
     try {
-      // Call the Pterodactyl API to update server resources
-      const response = await fetch(
-        `${settings.pterodactyl.domain}/api/application/servers/${serverId}/build`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${settings.pterodactyl.key}`,
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify({
-            memory: newLimits.memory,
-            swap: 0,
-            disk: newLimits.disk,
-            io: 500,
-            cpu: newLimits.cpu
-          })
-        }
-      );
-
-      if (!response.ok) {
-        console.error('[BOOST] Failed to update server resources:', await response.text());
-        return false;
-      }
+      await pteroApi.patch(`/api/application/servers/${serverId}/build`, {
+        memory: newLimits.memory,
+        swap: 0,
+        disk: newLimits.disk,
+        io: 500,
+        cpu: newLimits.cpu
+      });
 
       return true;
     } catch (err) {
-      console.error('[BOOST] Error updating server resources:', err);
+      console.error('[BOOST] Error updating server resources:', err.response?.data || err.message);
       return false;
     }
   }
@@ -774,40 +768,34 @@ module.exports.load = function (app, db) {
       }
 
       // Fetch server info to get current resources
-      const serverInfoResponse = await fetch(
-        `${settings.pterodactyl.domain}/api/application/servers/${serverId}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${settings.pterodactyl.key}`,
-            'Accept': 'application/json'
-          }
+      try {
+        const serverInfoResponse = await pteroApi.get(`/api/application/servers/${serverId}`);
+        const serverInfo = serverInfoResponse.data;
+
+        // Verify server ownership
+        if (serverInfo.attributes.user !== parseInt(await db.get(`users-${userId}`))) {
+          return res.status(403).json({ error: 'You do not own this server', code: 'NOT_OWNER' });
         }
-      );
 
-      if (!serverInfoResponse.ok) {
-        return res.status(404).json({ error: 'Server not found', code: 'SERVER_NOT_FOUND' });
+        const result = await boostManager.applyBoost(
+          userId,
+          serverId,
+          serverInfo.attributes,
+          boostType,
+          duration
+        );
+
+        res.json({
+          success: true,
+          boost: result.boost,
+          newBalance: result.newBalance
+        });
+      } catch (error) {
+        if (error.response?.status === 404) {
+          return res.status(404).json({ error: 'Server not found', code: 'SERVER_NOT_FOUND' });
+        }
+        throw error;
       }
-
-      const serverInfo = await serverInfoResponse.json();
-
-      // Verify server ownership
-      if (serverInfo.attributes.user !== parseInt(await db.get(`users-${userId}`))) {
-        return res.status(403).json({ error: 'You do not own this server', code: 'NOT_OWNER' });
-      }
-
-      const result = await boostManager.applyBoost(
-        userId,
-        serverId,
-        serverInfo.attributes,
-        boostType,
-        duration
-      );
-
-      res.json({
-        success: true,
-        boost: result.boost,
-        newBalance: result.newBalance
-      });
     } catch (error) {
       if (error.name === 'BoostError') {
         return res.status(400).json({ error: error.message, code: error.code });
@@ -891,41 +879,35 @@ module.exports.load = function (app, db) {
       }
 
       // Fetch server info to get current resources
-      const serverInfoResponse = await fetch(
-        `${settings.pterodactyl.domain}/api/application/servers/${serverId}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${settings.pterodactyl.key}`,
-            'Accept': 'application/json'
-          }
+      try {
+        const serverInfoResponse = await pteroApi.get(`/api/application/servers/${serverId}`);
+        const serverInfo = serverInfoResponse.data;
+
+        // Verify server ownership
+        if (serverInfo.attributes.user !== parseInt(await db.get(`users-${userId}`))) {
+          return res.status(403).json({ error: 'You do not own this server', code: 'NOT_OWNER' });
         }
-      );
 
-      if (!serverInfoResponse.ok) {
-        return res.status(404).json({ error: 'Server not found', code: 'SERVER_NOT_FOUND' });
+        const result = await boostManager.scheduleBoost(
+          userId,
+          serverId,
+          serverInfo.attributes,
+          boostType,
+          duration,
+          parseInt(scheduledTime)
+        );
+
+        res.json({
+          success: true,
+          scheduledBoost: result.scheduledBoost,
+          newBalance: result.newBalance
+        });
+      } catch (error) {
+        if (error.response?.status === 404) {
+          return res.status(404).json({ error: 'Server not found', code: 'SERVER_NOT_FOUND' });
+        }
+        throw error;
       }
-
-      const serverInfo = await serverInfoResponse.json();
-
-      // Verify server ownership
-      if (serverInfo.attributes.user !== parseInt(await db.get(`users-${userId}`))) {
-        return res.status(403).json({ error: 'You do not own this server', code: 'NOT_OWNER' });
-      }
-
-      const result = await boostManager.scheduleBoost(
-        userId,
-        serverId,
-        serverInfo.attributes,
-        boostType,
-        duration,
-        parseInt(scheduledTime)
-      );
-
-      res.json({
-        success: true,
-        scheduledBoost: result.scheduledBoost,
-        newBalance: result.newBalance
-      });
     } catch (error) {
       if (error.name === 'BoostError') {
         return res.status(400).json({ error: error.message, code: error.code });
@@ -979,31 +961,8 @@ module.exports.load = function (app, db) {
         for (const boost of dueBoosts) {
           try {
             // Fetch server info
-            const serverInfoResponse = await fetch(
-              `${settings.pterodactyl.domain}/api/application/servers/${boost.serverId}`,
-              {
-                headers: {
-                  'Authorization': `Bearer ${settings.pterodactyl.key}`,
-                  'Accept': 'application/json'
-                }
-              }
-            );
-
-            if (!serverInfoResponse.ok) {
-              console.error(`[BOOST] Server not found for scheduled boost: ${boost.serverId}`);
-              // Refund the user
-              const userCoins = await db.get(`coins-${boost.userId}`) || 0;
-              await db.set(`coins-${boost.userId}`, userCoins + boost.price);
-
-              await boostManager.logBoostActivity(boost.userId, boost.serverId, 'scheduled_failed', {
-                reason: 'Server not found',
-                refundAmount: boost.price,
-                ...boost
-              });
-              continue;
-            }
-
-            const serverInfo = await serverInfoResponse.json();
+            const serverInfoResponse = await pteroApi.get(`/api/application/servers/${boost.serverId}`);
+            const serverInfo = serverInfoResponse.data;
 
             // Apply the boost
             await boostManager.applyBoost(

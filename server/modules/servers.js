@@ -2,7 +2,7 @@ const express = require('express');
 const rateLimit = require('express-rate-limit');
 const loadConfig = require('../handlers/config');
 const settings = loadConfig('./config.toml');
-const fetch = require('node-fetch');
+const axios = require('axios');
 const getPteroUser = require('../handlers/getPteroUser');
 const log = require('../handlers/log');
 
@@ -10,6 +10,16 @@ const log = require('../handlers/log');
 if (settings.pterodactyl?.domain?.slice(-1) === '/') {
     settings.pterodactyl.domain = settings.pterodactyl.domain.slice(0, -1);
 }
+
+// Pterodactyl API helper
+const pteroApi = axios.create({
+    baseURL: settings.pterodactyl.domain,
+    headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${settings.pterodactyl.key}`
+    }
+});
 
 /* --------------------------------------------- */
 /* Heliactyl Next Module                                  */
@@ -334,26 +344,7 @@ module.exports.load = async function (app, db) {
             };
 
             // Create server on Pterodactyl
-            const response = await fetch(
-                `${settings.pterodactyl.domain}/api/application/servers`,
-                {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${settings.pterodactyl.key}`,
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify(serverSpec)
-                }
-            );
-
-            if (!response.ok) {
-                const error = await response.json();
-                console.error('Pterodactyl API Error:', error);
-                return res.status(400).json(error);
-            }
-
-            const server = await response.json();
+            const response = await pteroApi.post('/api/application/servers', serverSpec);
 
             // Log server creation
             log('server_created',
@@ -361,8 +352,12 @@ module.exports.load = async function (app, db) {
                 `(RAM: ${ram}MB, CPU: ${cpu}%, Disk: ${disk}MB)`
             );
 
-            res.status(201).json(server);
+            res.status(201).json(response.data);
         } catch (error) {
+            if (error.response) {
+                console.error('Pterodactyl API Error:', error.response.data);
+                return res.status(400).json(error.response.data);
+            }
             console.error('Error creating server:', error);
             res.status(500).json({ error: 'Failed to create server' });
         }
@@ -404,21 +399,8 @@ module.exports.load = async function (app, db) {
             // If not found, fetch server list from Pterodactyl API to find by identifier
             if (!server && !/^\d+$/.test(idOrIdentifier)) {
                 // Fetch servers from Pterodactyl API
-                const response = await fetch(
-                    `${settings.pterodactyl.domain}/api/application/servers?per_page=100000`,
-                    {
-                        headers: {
-                            'Authorization': `Bearer ${settings.pterodactyl.key}`,
-                            'Accept': 'application/json'
-                        }
-                    }
-                );
-
-                if (!response.ok) {
-                    return res.status(500).json({ error: 'Failed to fetch servers from Pterodactyl' });
-                }
-
-                const allServers = await response.json();
+                const response = await pteroApi.get('/api/application/servers?per_page=100000');
+                const allServers = response.data;
 
                 // Find server with matching identifier
                 const matchingServer = allServers.data.find(s => s.attributes.identifier === idOrIdentifier);
@@ -492,33 +474,15 @@ module.exports.load = async function (app, db) {
             }
 
             // Send update request to Pterodactyl
-            const patchResponse = await fetch(
-                `${settings.pterodactyl.domain}/api/application/servers/${serverId}/build`,
-                {
-                    method: 'PATCH',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${settings.pterodactyl.key}`,
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        allocation: server.attributes.allocation,
-                        memory: ram,
-                        swap: server.attributes.limits.swap,
-                        disk: disk,
-                        io: server.attributes.limits.io,
-                        cpu: cpu,
-                        feature_limits: server.attributes.feature_limits
-                    })
-                }
-            );
-
-            if (!patchResponse.ok) {
-                const error = await patchResponse.json();
-                return res.status(400).json(error);
-            }
-
-            const updatedServer = await patchResponse.json();
+            const patchResponse = await pteroApi.patch(`/api/application/servers/${serverId}/build`, {
+                allocation: server.attributes.allocation,
+                memory: ram,
+                swap: server.attributes.limits.swap,
+                disk: disk,
+                io: server.attributes.limits.io,
+                cpu: cpu,
+                feature_limits: server.attributes.feature_limits
+            });
 
             // Log the modification
             log('server_modified',
@@ -526,8 +490,11 @@ module.exports.load = async function (app, db) {
                 `(RAM: ${ram}MB, CPU: ${cpu}%, Disk: ${disk}MB)`
             );
 
-            res.json(updatedServer);
+            res.json(patchResponse.data);
         } catch (error) {
+            if (error.response) {
+                return res.status(400).json(error.response.data);
+            }
             console.error('Error modifying server:', error);
             res.status(500).json({ error: 'Failed to modify server' });
         }
@@ -558,21 +525,8 @@ module.exports.load = async function (app, db) {
             // If not found by user's servers and it's not a numeric ID, fetch all servers to find by identifier
             if (!server && !/^\d+$/.test(idOrIdentifier)) {
                 // Fetch servers from Pterodactyl API
-                const response = await fetch(
-                    `${settings.pterodactyl.domain}/api/application/servers?per_page=100000`,
-                    {
-                        headers: {
-                            'Authorization': `Bearer ${settings.pterodactyl.key}`,
-                            'Accept': 'application/json'
-                        }
-                    }
-                );
-
-                if (!response.ok) {
-                    return res.status(500).json({ error: 'Failed to fetch servers from Pterodactyl' });
-                }
-
-                const allServers = await response.json();
+                const response = await pteroApi.get('/api/application/servers?per_page=100000');
+                const allServers = response.data;
 
                 // Find server with matching identifier
                 const matchingServer = allServers.data.find(s => s.attributes.identifier === idOrIdentifier);
@@ -596,35 +550,14 @@ module.exports.load = async function (app, db) {
             }
 
             // Check if server is suspended
-            const serverInfo = await fetch(
-                `${settings.pterodactyl.domain}/api/application/servers/${serverId}`,
-                {
-                    headers: {
-                        'Authorization': `Bearer ${settings.pterodactyl.key}`
-                    }
-                }
-            );
-
-            const serverData = await serverInfo.json();
+            const serverInfoResponse = await pteroApi.get(`/api/application/servers/${serverId}`);
+            const serverData = serverInfoResponse.data;
             if (serverData.attributes.suspended) {
                 return res.status(400).json({ error: 'Cannot delete suspended server' });
             }
 
             // Send delete request to Pterodactyl
-            const deleteResponse = await fetch(
-                `${settings.pterodactyl.domain}/api/application/servers/${serverId}/force`,
-                {
-                    method: 'DELETE',
-                    headers: {
-                        'Authorization': `Bearer ${settings.pterodactyl.key}`
-                    }
-                }
-            );
-
-            if (!deleteResponse.ok) {
-                const error = await deleteResponse.json();
-                return res.status(400).json(error);
-            }
+            await pteroApi.delete(`/api/application/servers/${serverId}/force`);
 
             // Log the deletion
             log('server_deleted',
@@ -633,6 +566,9 @@ module.exports.load = async function (app, db) {
 
             res.status(204).send();
         } catch (error) {
+            if (error.response) {
+                return res.status(400).json(error.response.data);
+            }
             console.error('Error deleting server:', error);
             res.status(500).json({ error: 'Failed to delete server' });
         }

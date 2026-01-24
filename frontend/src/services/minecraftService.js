@@ -1,7 +1,7 @@
 // src/services/minecraftService.js
 import axios from 'axios';
 
-// Function to fetch Minecraft server status
+// Function to get Minecraft server status
 export const fetchServerStatus = async (serverAddress) => {
   try {
     // Using a custom User-Agent as required by the API
@@ -10,7 +10,7 @@ export const fetchServerStatus = async (serverAddress) => {
         'User-Agent': 'Altare-Admin-Panel/1.0'
       }
     });
-    
+
     return response.data;
   } catch (error) {
     console.error('Error fetching Minecraft server status:', error);

@@ -3,10 +3,7 @@ const bcrypt = require('bcrypt');
 const { v4: uuidv4 } = require('uuid');
 const loadConfig = require("../handlers/config.js");
 const settings = loadConfig("./config.toml");
-const fetch = require("node-fetch");
-const log = require("../handlers/log.js");
-const fs = require("fs");
-const { renderFile } = require("ejs");
+const axios = require("axios");
 
 const RESEND_API_KEY = settings.api.client.resend.api_key;
 
@@ -94,21 +91,19 @@ module.exports.load = async function (app, db) {
   };
 
   const sendEmail = async (to, subject, html) => {
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
+    const response = await axios.post('https://api.resend.com/emails', {
+      from: settings.api.client.resend.from,
+      to,
+      subject,
+      html
+    }, {
       headers: {
         'Authorization': `Bearer ${RESEND_API_KEY}`,
         'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        from: settings.api.client.resend.from,
-        to,
-        subject,
-        html
-      })
+      }
     });
 
-    if (!response.ok) {
+    if (response.status !== 200 && response.status !== 201) {
       throw new Error('Failed to send email');
     }
   };
@@ -198,26 +193,30 @@ module.exports.load = async function (app, db) {
 
     // Create Pterodactyl account
     let genpassword = makeid(settings.api.client.passwordgenerator.length);
-    let accountjson = await fetch(
-      settings.pterodactyl.domain + "/api/application/users",
-      {
-        method: "post",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
-        },
-        body: JSON.stringify({
+    let accountjson;
+    try {
+      accountjson = await axios.post(
+        settings.pterodactyl.domain + "/api/application/users",
+        {
           username: username,
           email: email,
           first_name: username,
           last_name: " on Heliactyl",
           password: genpassword,
-        }),
-      }
-    );
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${settings.pterodactyl.key}`,
+          },
+        }
+      );
+    } catch (err) {
+      accountjson = { status: err.response?.status || 500 };
+    }
 
-    if ((await accountjson.status) == 201) {
-      let accountinfo = JSON.parse(await accountjson.text());
+    if (accountjson.status === 201) {
+      let accountinfo = accountjson.data;
       let userids = (await db.get("users")) ? await db.get("users") : [];
       userids.push(accountinfo.attributes.id);
       await db.set("users", userids);
@@ -257,16 +256,20 @@ module.exports.load = async function (app, db) {
     try {
       // Try to fetch existing Pterodactyl user info
       let pterodactylId = await db.get("users-" + user.id);
-      let cacheaccount = await fetch(
-        settings.pterodactyl.domain + "/api/application/users/" + pterodactylId + "?include=servers",
-        {
-          method: "get",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${settings.pterodactyl.key}`,
-          },
-        }
-      );
+      let cacheaccount;
+      try {
+        cacheaccount = await axios.get(
+          settings.pterodactyl.domain + "/api/application/users/" + pterodactylId + "?include=servers",
+          {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${settings.pterodactyl.key}`,
+            },
+          }
+        );
+      } catch (err) {
+        cacheaccount = { status: err.response?.status || 500 };
+      }
 
       // If user doesn't exist in Pterodactyl, create new account
       if (cacheaccount.status === 404 || !pterodactylId) {
@@ -280,10 +283,9 @@ module.exports.load = async function (app, db) {
         await db.set("users-" + user.id, pterodactylId);
 
         // Fetch updated user info
-        cacheaccount = await fetch(
+        cacheaccount = await axios.get(
           settings.pterodactyl.domain + "/api/application/users/" + pterodactylId + "?include=servers",
           {
-            method: "get",
             headers: {
               "Content-Type": "application/json",
               Authorization: `Bearer ${settings.pterodactyl.key}`,
@@ -292,11 +294,11 @@ module.exports.load = async function (app, db) {
         );
       }
 
-      if (!cacheaccount.ok) {
+      if (cacheaccount.status !== 200) {
         throw new Error(`Failed to fetch Pterodactyl account: ${cacheaccount.status}`);
       }
 
-      const cacheaccountinfo = await cacheaccount.json();
+      const cacheaccountinfo = cacheaccount.data;
       req.session.pterodactyl = cacheaccountinfo.attributes;
 
       // Auth notification
@@ -457,22 +459,26 @@ module.exports.load = async function (app, db) {
     };
 
     // Fetch Pterodactyl user info
-    let cacheaccount = await fetch(
-      settings.pterodactyl.domain + "/api/application/users/" + (await db.get("users-" + user.id)) + "?include=servers",
-      {
-        method: "get",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
-        },
-      }
-    );
-
-    if ((await cacheaccount.statusText) == "Not Found") {
+    let cacheaccount;
+    try {
+      cacheaccount = await axios.get(
+        settings.pterodactyl.domain + "/api/application/users/" + (await db.get("users-" + user.id)) + "?include=servers",
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${settings.pterodactyl.key}`,
+          },
+        }
+      );
+    } catch (err) {
       return res.status(500).json({ error: "Failed to fetch user information" });
     }
 
-    let cacheaccountinfo = JSON.parse(await cacheaccount.text());
+    if (cacheaccount.status === 404) {
+      return res.status(500).json({ error: "Failed to fetch user information" });
+    }
+
+    let cacheaccountinfo = cacheaccount.data;
     req.session.pterodactyl = cacheaccountinfo.attributes;
 
     // Delete the used magic token

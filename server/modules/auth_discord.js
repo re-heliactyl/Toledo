@@ -1,4 +1,4 @@
-const fetch = require('node-fetch');
+const axios = require('axios');
 const { Client, GatewayIntentBits, Partials } = require('discord.js');
 const loadConfig = require("../handlers/config.js");
 const settings = loadConfig("./config.toml");
@@ -32,6 +32,16 @@ const DISCORD_BOT_TOKEN = settings.api.client.discord.bot_token;
 const DISCORD_SERVER_ID = settings.api.client.discord.server_id;
 const DISCORD_REDIRECT_URI = `${settings.website.domain}/auth/discord/callback`;
 const DISCORD_SIGNUP_BONUS = 100;
+
+// Pterodactyl API helper
+const pteroApi = axios.create({
+  baseURL: settings.pterodactyl.domain,
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'Authorization': `Bearer ${settings.pterodactyl.key}`
+  }
+});
 
 // Initialize Discord client
 const client = new Client({
@@ -84,7 +94,6 @@ async function createPterodactylAccount(userId, username, email, retryCount = 0)
     return cleaned;
   };
 
-  const apiUrl = settings.pterodactyl.domain.replace(/\/$/, '') + '/api/application/users';
   const password = generatePassword(16);
 
   // Create a username with userId as fallback to ensure uniqueness
@@ -93,57 +102,27 @@ async function createPterodactylAccount(userId, username, email, retryCount = 0)
   const finalUsername = retryCount ? `${baseUsername}_${userId.slice(0, 6)}${retryCount}` : `${baseUsername}_${userId.slice(0, 6)}`;
 
   try {
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${settings.pterodactyl.key}`
-      },
-      body: JSON.stringify({
-        email: retryCount ? `discord_${userId}+${retryCount}@${email.split('@')[1]}` : `discord_${userId}@${email.split('@')[1]}`,
-        username: finalUsername,
-        first_name: username,
-        last_name: 'User',
-        password: password,
-        root_admin: false,
-        language: 'en'
-      })
+    const response = await pteroApi.post('/api/application/users', {
+      email: retryCount ? `discord_${userId}+${retryCount}@${email.split('@')[1]}` : `discord_${userId}@${email.split('@')[1]}`,
+      username: finalUsername,
+      first_name: username,
+      last_name: 'User',
+      password: password,
+      root_admin: false,
+      language: 'en'
     });
 
-    const responseText = await response.text();
-    let data;
-
-    try {
-      data = JSON.parse(responseText);
-
-      // If we got JSON but it's an error response
-      if (!response.ok) {
-        if (response.status === 422 && retryCount < 3) {
-          return createPterodactylAccount(userId, username, email, retryCount + 1);
-        }
-        throw new Error(`API error: ${response.status} ${JSON.stringify(data.errors)}`);
-      }
-
-      return {
-        id: data.attributes.id,
-        username: data.attributes.username,
-        email: data.attributes.email,
-        password: password
-      };
-    } catch (e) {
-      if (responseText.includes('ValidationException')) {
-        console.error('Validation error:', responseText);
-        throw new Error('Username validation failed. Please use only letters, numbers, dashes, underscores, and periods.');
-      }
-      console.error('Failed to parse response:', {
-        text: responseText,
-        status: response.status,
-        contentType: response.headers.get('content-type')
-      });
-      throw new Error('Invalid API response');
-    }
+    return {
+      id: response.data.attributes.id,
+      username: response.data.attributes.username,
+      email: response.data.attributes.email,
+      password: password
+    };
   } catch (error) {
+    if (error.response?.status === 422 && retryCount < 3) {
+      return createPterodactylAccount(userId, username, email, retryCount + 1);
+    }
+
     console.error('Pterodactyl API error:', {
       message: error.message,
       username: finalUsername,
@@ -151,7 +130,7 @@ async function createPterodactylAccount(userId, username, email, retryCount = 0)
       userId: userId,
       email: email.replace(/@.*/, '@[redacted]'),
       retryCount,
-      url: apiUrl
+      errors: error.response?.data?.errors
     });
     throw error;
   }
@@ -159,39 +138,16 @@ async function createPterodactylAccount(userId, username, email, retryCount = 0)
 
 async function verifyPterodactylAccount(pteroId) {
   try {
-    const response = await fetch(
-      `${settings.pterodactyl.domain}/api/application/users/${pteroId}`,
-      {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${settings.pterodactyl.key}`,
-        },
-      }
-    );
-    return response.ok;
+    await pteroApi.get(`/api/application/users/${pteroId}`);
+    return true;
   } catch {
     return false;
   }
 }
 
 async function fetchPterodactylData(pteroId) {
-  const response = await fetch(
-    `${settings.pterodactyl.domain}/api/application/users/${pteroId}?include=servers`,
-    {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${settings.pterodactyl.key}`,
-      },
-    }
-  );
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch Pterodactyl data: ${response.status}`);
-  }
-
-  return response.json();
+  const response = await pteroApi.get(`/api/application/users/${pteroId}?include=servers`);
+  return response.data;
 }
 
 async function addDiscordServerMember(userId, accessToken, username) {
@@ -268,38 +224,31 @@ module.exports.load = async function (app, db) {
 
     try {
       // Exchange code for access token
-      const tokenResponse = await fetch('https://discord.com/api/oauth2/token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
+      const tokenResponse = await axios.post('https://discord.com/api/oauth2/token',
+        new URLSearchParams({
           client_id: DISCORD_CLIENT_ID,
           client_secret: DISCORD_CLIENT_SECRET,
           grant_type: 'authorization_code',
           code,
           redirect_uri: DISCORD_REDIRECT_URI,
         }),
-      });
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+        }
+      );
 
-      if (!tokenResponse.ok) {
-        throw new Error('Failed to exchange code for token');
-      }
-
-      const tokenData = await tokenResponse.json();
+      const tokenData = tokenResponse.data;
 
       // Fetch user data
-      const userResponse = await fetch('https://discord.com/api/v10/users/@me', {
+      const userResponse = await axios.get('https://discord.com/api/v10/users/@me', {
         headers: {
           Authorization: `Bearer ${tokenData.access_token}`,
         },
       });
 
-      if (!userResponse.ok) {
-        throw new Error('Failed to fetch user data');
-      }
-
-      const userData = await userResponse.json();
+      const userData = userResponse.data;
 
       // Get or create user record
       let userRecord = await db.get(`discord-${userData.id}`);
@@ -405,24 +354,21 @@ module.exports.load = async function (app, db) {
     }
 
     try {
-      const response = await fetch('https://discord.com/api/v10/oauth2/token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
+      const response = await axios.post('https://discord.com/api/v10/oauth2/token',
+        new URLSearchParams({
           client_id: DISCORD_CLIENT_ID,
           client_secret: DISCORD_CLIENT_SECRET,
           grant_type: 'refresh_token',
           refresh_token: userRecord.refresh_token,
         }),
-      });
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+        }
+      );
 
-      if (!response.ok) {
-        throw new Error('Failed to refresh token');
-      }
-
-      const tokenData = await response.json();
+      const tokenData = response.data;
 
       // Update stored tokens
       userRecord.access_token = tokenData.access_token;

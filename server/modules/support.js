@@ -1,7 +1,17 @@
 const loadConfig = require("../handlers/config.js");
 const settings = loadConfig("./config.toml");
-const fetch = require("node-fetch");
+const axios = require("axios");
 const { v4: uuidv4 } = require('uuid');
+
+// Pterodactyl API helper
+const pteroApi = axios.create({
+  baseURL: settings.pterodactyl.domain,
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'Authorization': `Bearer ${settings.pterodactyl.key}`
+  }
+});
 
 /* Ensure platform release target is met */
 const HeliactylModule = {
@@ -32,21 +42,13 @@ module.exports.load = async function (app, db) {
     if (!req.session.pterodactyl) return false;
 
     try {
-      let cacheaccount = await fetch(
-        `${settings.pterodactyl.domain}/api/application/users/${await db.get("users-" + req.session.userinfo.id)}?include=servers`,
-        {
-          method: "get",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${settings.pterodactyl.key}`
-          }
-        }
+      const response = await pteroApi.get(
+        `/api/application/users/${await db.get("users-" + req.session.userinfo.id)}?include=servers`
       );
 
-      if ((await cacheaccount.statusText) === "Not Found") return false;
-      let cacheaccountinfo = JSON.parse(await cacheaccount.text());
-      return cacheaccountinfo.attributes.root_admin === true;
+      return response.data.attributes.root_admin === true;
     } catch (error) {
+      if (error.response?.status === 404) return false;
       console.error("Error checking admin status:", error);
       return false;
     }
@@ -312,24 +314,27 @@ module.exports.load = async function (app, db) {
 
       // Add user information to each ticket
       const ticketsWithUserInfo = await Promise.all(tickets.map(async (ticket) => {
-        const userInfo = await fetch(
-          `${settings.pterodactyl.domain}/api/application/users/${await db.get("users-" + ticket.userId)}`,
-          {
-            method: "get",
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${settings.pterodactyl.key}`
-            }
-          }
-        ).then(r => r.json());
+        try {
+          const response = await pteroApi.get(
+            `/api/application/users/${await db.get("users-" + ticket.userId)}`
+          );
 
-        return {
-          ...ticket,
-          user: {
-            username: userInfo.attributes.username,
-            email: userInfo.attributes.email
-          }
-        };
+          return {
+            ...ticket,
+            user: {
+              username: response.data.attributes.username,
+              email: response.data.attributes.email
+            }
+          };
+        } catch (error) {
+          return {
+            ...ticket,
+            user: {
+              username: 'Unknown',
+              email: 'unknown@example.com'
+            }
+          };
+        }
       }));
 
       res.json(ticketsWithUserInfo);

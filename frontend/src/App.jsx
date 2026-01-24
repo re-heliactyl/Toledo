@@ -38,6 +38,12 @@ import Daily from './pages/coins/Daily';
 import AccountPage from './pages/Account';
 import PasskeyManager from './pages/Passkeys';
 
+import AdminOverview from './pages/admin/Overview';
+import AdminUsers from './pages/admin/Users';
+import AdminNodes from './pages/admin/Nodes';
+import AdminTickets from './pages/admin/Tickets';
+import AdminRadar from './pages/admin/Radar';
+
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -287,6 +293,13 @@ export default function App() {
 
             {/* Others */}
             <Route path="/boosts" element={<Boosts />} />
+
+            {/* Admin routes */}
+            <Route path="/admin/overview" element={<AdminOverview />} />
+            <Route path="/admin/users" element={<AdminUsers />} />
+            <Route path="/admin/nodes" element={<AdminNodes />} />
+            <Route path="/admin/tickets" element={<AdminTickets />} />
+            <Route path="/admin/radar" element={<AdminRadar />} />
           </Route>
 
           {/* 404 catch-all route */}

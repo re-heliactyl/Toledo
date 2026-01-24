@@ -1,7 +1,7 @@
 const express = require('express');
 const { spawn } = require('child_process');
 const { exec } = require('child_process');
-const fetch = require('node-fetch');
+const axios = require('axios');
 const path = require('path');
 const fs = require('fs').promises;
 const TOML = require('@iarna/toml');
@@ -9,25 +9,25 @@ const log = require('../handlers/log.js');
 const loadConfig = require('../handlers/config.js');
 const settings = loadConfig('./config.toml');
 
+// Pterodactyl API helper
+const pteroApi = axios.create({
+  baseURL: settings.pterodactyl.domain,
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${settings.pterodactyl.key}`
+  }
+});
+
 // Check admin status utility function
 async function checkAdminStatus(req, res, settings, db) {
   if (!req.session.pterodactyl) return false;
 
   try {
-    let cacheaccount = await fetch(
-      `${settings.pterodactyl.domain}/api/application/users/${await db.get("users-" + req.session.userinfo.id)}?include=servers`,
-      {
-        method: "get",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${settings.pterodactyl.key}`
-        }
-      }
-    );
-
-    if ((await cacheaccount.statusText) === "Not Found") return false;
-    let cacheaccountinfo = JSON.parse(await cacheaccount.text());
-    return cacheaccountinfo.attributes.root_admin === true;
+    const userId = await db.get("users-" + req.session.userinfo.id);
+    const response = await pteroApi.get(`/api/application/users/${userId}?include=servers`);
+    console.log(response.data)
+    console.log(response.data.attributes.root_admin);
+    return response.data.attributes.root_admin === true;
   } catch (error) {
     console.error("Error checking admin status:", error);
     return false;
@@ -69,24 +69,11 @@ module.exports.load = async function (app, db) {
 
   // Update dashboard name
   app.patch("/api/config/name", async (req, res) => {
-    if (!req.session.pterodactyl) return res.status(403).json({ error: "Unauthorized" });
+    if (!await checkAdmin(req, res, settings, db)) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
 
     try {
-      let cacheaccount = await fetch(
-        `${settings.pterodactyl.domain}/api/application/users/${await db.get("users-" + req.session.userinfo.id)}?include=servers`,
-        {
-          method: "get",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${settings.pterodactyl.key}`
-          }
-        }
-      );
-
-      if ((await cacheaccount.statusText) == "Not Found") return res.status(404).json({ error: "User not found" });
-      let cacheaccountinfo = JSON.parse(await cacheaccount.text());
-
-      if (!cacheaccountinfo.attributes.root_admin) return res.status(403).json({ error: "Unauthorized" });
 
       const { name } = req.body;
 
@@ -128,24 +115,11 @@ module.exports.load = async function (app, db) {
 
   // Update dashboard logo
   app.patch("/api/config/logo", async (req, res) => {
-    if (!req.session.pterodactyl) return res.status(403).json({ error: "Unauthorized" });
+    if (!await checkAdmin(req, res, settings, db)) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
 
     try {
-      let cacheaccount = await fetch(
-        `${settings.pterodactyl.domain}/api/application/users/${await db.get("users-" + req.session.userinfo.id)}?include=servers`,
-        {
-          method: "get",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${settings.pterodactyl.key}`
-          }
-        }
-      );
-
-      if ((await cacheaccount.statusText) == "Not Found") return res.status(404).json({ error: "User not found" });
-      let cacheaccountinfo = JSON.parse(await cacheaccount.text());
-
-      if (!cacheaccountinfo.attributes.root_admin) return res.status(403).json({ error: "Unauthorized" });
 
       const { logo } = req.body;
 
@@ -187,24 +161,11 @@ module.exports.load = async function (app, db) {
 
   // Rebuild panel
   app.post("/api/panel/rebuild", async (req, res) => {
-    if (!req.session.pterodactyl) return res.status(403).json({ error: "Unauthorized" });
+    if (!await checkAdmin(req, res, settings, db)) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
 
     try {
-      let cacheaccount = await fetch(
-        `${settings.pterodactyl.domain}/api/application/users/${await db.get("users-" + req.session.userinfo.id)}?include=servers`,
-        {
-          method: "get",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${settings.pterodactyl.key}`
-          }
-        }
-      );
-
-      if ((await cacheaccount.statusText) == "Not Found") return res.status(404).json({ error: "User not found" });
-      let cacheaccountinfo = JSON.parse(await cacheaccount.text());
-
-      if (!cacheaccountinfo.attributes.root_admin) return res.status(403).json({ error: "Unauthorized" });
 
       // Path to the panel directory
       const panelPath = path.join(process.cwd(), '..', 'panel');
@@ -268,25 +229,11 @@ module.exports.load = async function (app, db) {
   });
 
   app.get("/api/config", async (req, res) => {
-    if (!req.session.pterodactyl) return res.status(403).json({ error: "Unauthorized" });
+    if (!await checkAdmin(req, res, settings, db)) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
 
     try {
-      let cacheaccount = await fetch(
-        `${settings.pterodactyl.domain}/api/application/users/${await db.get("users-" + req.session.userinfo.id)}?include=servers`,
-        {
-          method: "get",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${settings.pterodactyl.key}`
-          }
-        }
-      );
-
-      if ((await cacheaccount.statusText) == "Not Found") return res.status(404).json({ error: "User not found" });
-      let cacheaccountinfo = JSON.parse(await cacheaccount.text());
-
-      if (!cacheaccountinfo.attributes.root_admin) return res.status(403).json({ error: "Unauthorized" });
-
       const config = await loadConfig("./config.toml");
       res.json(config);
     } catch (error) {
@@ -360,25 +307,11 @@ module.exports.load = async function (app, db) {
 
   // Check if reboot is needed
   app.get("/api/reboot/status", async (req, res) => {
-    if (!req.session.pterodactyl) return res.status(403).json({ error: "Unauthorized" });
+    if (!await checkAdmin(req, res, settings, db)) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
 
     try {
-      let cacheaccount = await fetch(
-        `${settings.pterodactyl.domain}/api/application/users/${await db.get("users-" + req.session.userinfo.id)}?include=servers`,
-        {
-          method: "get",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${settings.pterodactyl.key}`
-          }
-        }
-      );
-
-      if ((await cacheaccount.statusText) == "Not Found") return res.status(404).json({ error: "User not found" });
-      let cacheaccountinfo = JSON.parse(await cacheaccount.text());
-
-      if (!cacheaccountinfo.attributes.root_admin) return res.status(403).json({ error: "Unauthorized" });
-
       res.json({
         needsReboot: configNeedsReboot
       });
@@ -390,25 +323,11 @@ module.exports.load = async function (app, db) {
 
   // Improved reboot endpoint
   app.post("/api/reboot", async (req, res) => {
-    if (!req.session.pterodactyl) return res.status(403).json({ error: "Unauthorized" });
+    if (!await checkAdmin(req, res, settings, db)) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
 
     try {
-      let cacheaccount = await fetch(
-        `${settings.pterodactyl.domain}/api/application/users/${await db.get("users-" + req.session.userinfo.id)}?include=servers`,
-        {
-          method: "get",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${settings.pterodactyl.key}`
-          }
-        }
-      );
-
-      if ((await cacheaccount.statusText) == "Not Found") return res.status(404).json({ error: "User not found" });
-      let cacheaccountinfo = JSON.parse(await cacheaccount.text());
-
-      if (!cacheaccountinfo.attributes.root_admin) return res.status(403).json({ error: "Unauthorized" });
-
       log(
         "dashboard reboot",
         `${req.session.userinfo.username} initiated a dashboard reboot.`
@@ -462,38 +381,23 @@ module.exports.load = async function (app, db) {
   });
 
   app.get("/api/radar/nodes", async (req, res) => {
-    if (!req.session.pterodactyl) return res.status(403).json({ error: "Unauthorized" });
+    if (!await checkAdmin(req, res, settings, db)) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
 
     try {
-      let cacheaccount = await fetch(
-        `${settings.pterodactyl.domain}/api/application/users/${await db.get("users-" + req.session.userinfo.id)}?include=servers`,
-        {
-          method: "get",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${settings.pterodactyl.key}`
-          }
-        }
-      );
-
-      if ((await cacheaccount.statusText) == "Not Found") return res.status(404).json({ error: "User not found" });
-      let cacheaccountinfo = JSON.parse(await cacheaccount.text());
-
-      if (!cacheaccountinfo.attributes.root_admin) return res.status(403).json({ error: "Unauthorized" });
-
       const nodes = await db.get("radar-nodes") || [];
 
       // Check status of each node
       const nodesWithStatus = await Promise.all(nodes.map(async (node) => {
         try {
-          const response = await fetch(`http://${node.fqdn}:${node.port}/api/stats`, {
+          const response = await axios.get(`http://${node.fqdn}:${node.port}/api/stats`, {
             timeout: 5000
           });
-          const stats = await response.json();
           return {
             ...node,
             status: "online",
-            stats
+            stats: response.data
           };
         } catch (error) {
           return {
@@ -513,39 +417,24 @@ module.exports.load = async function (app, db) {
 
   // Get specific radar node
   app.get("/api/radar/nodes/:id", async (req, res) => {
-    if (!req.session.pterodactyl) return res.status(403).json({ error: "Unauthorized" });
+    if (!await checkAdmin(req, res, settings, db)) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
 
     try {
-      let cacheaccount = await fetch(
-        `${settings.pterodactyl.domain}/api/application/users/${await db.get("users-" + req.session.userinfo.id)}?include=servers`,
-        {
-          method: "get",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${settings.pterodactyl.key}`
-          }
-        }
-      );
-
-      if ((await cacheaccount.statusText) == "Not Found") return res.status(404).json({ error: "User not found" });
-      let cacheaccountinfo = JSON.parse(await cacheaccount.text());
-
-      if (!cacheaccountinfo.attributes.root_admin) return res.status(403).json({ error: "Unauthorized" });
-
       const nodes = await db.get("radar-nodes") || [];
       const node = nodes.find(n => n.id === req.params.id);
 
       if (!node) return res.status(404).json({ error: "Node not found" });
 
       try {
-        const response = await fetch(`http://${node.fqdn}:${node.port}/api/stats`, {
+        const response = await axios.get(`http://${node.fqdn}:${node.port}/api/stats`, {
           timeout: 5000
         });
-        const stats = await response.json();
         res.json({
           ...node,
           status: "online",
-          stats
+          stats: response.data
         });
       } catch (error) {
         res.json({
@@ -562,25 +451,11 @@ module.exports.load = async function (app, db) {
 
   // Add new radar node
   app.post("/api/radar/nodes", async (req, res) => {
-    if (!req.session.pterodactyl) return res.status(403).json({ error: "Unauthorized" });
+    if (!await checkAdmin(req, res, settings, db)) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
 
     try {
-      let cacheaccount = await fetch(
-        `${settings.pterodactyl.domain}/api/application/users/${await db.get("users-" + req.session.userinfo.id)}?include=servers`,
-        {
-          method: "get",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${settings.pterodactyl.key}`
-          }
-        }
-      );
-
-      if ((await cacheaccount.statusText) == "Not Found") return res.status(404).json({ error: "User not found" });
-      let cacheaccountinfo = JSON.parse(await cacheaccount.text());
-
-      if (!cacheaccountinfo.attributes.root_admin) return res.status(403).json({ error: "Unauthorized" });
-
       const { name, fqdn, port, webhookUrl } = req.body;
 
       if (!name || !fqdn || !port) {
@@ -616,25 +491,11 @@ module.exports.load = async function (app, db) {
 
   // Update radar node
   app.patch("/api/radar/nodes/:id", async (req, res) => {
-    if (!req.session.pterodactyl) return res.status(403).json({ error: "Unauthorized" });
+    if (!await checkAdmin(req, res, settings, db)) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
 
     try {
-      let cacheaccount = await fetch(
-        `${settings.pterodactyl.domain}/api/application/users/${await db.get("users-" + req.session.userinfo.id)}?include=servers`,
-        {
-          method: "get",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${settings.pterodactyl.key}`
-          }
-        }
-      );
-
-      if ((await cacheaccount.statusText) == "Not Found") return res.status(404).json({ error: "User not found" });
-      let cacheaccountinfo = JSON.parse(await cacheaccount.text());
-
-      if (!cacheaccountinfo.attributes.root_admin) return res.status(403).json({ error: "Unauthorized" });
-
       const nodes = await db.get("radar-nodes") || [];
       const nodeIndex = nodes.findIndex(n => n.id === req.params.id);
 
@@ -663,25 +524,11 @@ module.exports.load = async function (app, db) {
 
   // Delete radar node
   app.delete("/api/radar/nodes/:id", async (req, res) => {
-    if (!req.session.pterodactyl) return res.status(403).json({ error: "Unauthorized" });
+    if (!await checkAdmin(req, res, settings, db)) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
 
     try {
-      let cacheaccount = await fetch(
-        `${settings.pterodactyl.domain}/api/application/users/${await db.get("users-" + req.session.userinfo.id)}?include=servers`,
-        {
-          method: "get",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${settings.pterodactyl.key}`
-          }
-        }
-      );
-
-      if ((await cacheaccount.statusText) == "Not Found") return res.status(404).json({ error: "User not found" });
-      let cacheaccountinfo = JSON.parse(await cacheaccount.text());
-
-      if (!cacheaccountinfo.attributes.root_admin) return res.status(403).json({ error: "Unauthorized" });
-
       const nodes = await db.get("radar-nodes") || [];
       const nodeIndex = nodes.findIndex(n => n.id === req.params.id);
 
@@ -705,38 +552,23 @@ module.exports.load = async function (app, db) {
 
   // Get analytics across all nodes
   app.get("/api/radar/analytics", async (req, res) => {
-    if (!req.session.pterodactyl) return res.status(403).json({ error: "Unauthorized" });
+    if (!await checkAdmin(req, res, settings, db)) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
 
     try {
-      let cacheaccount = await fetch(
-        `${settings.pterodactyl.domain}/api/application/users/${await db.get("users-" + req.session.userinfo.id)}?include=servers`,
-        {
-          method: "get",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${settings.pterodactyl.key}`
-          }
-        }
-      );
-
-      if ((await cacheaccount.statusText) == "Not Found") return res.status(404).json({ error: "User not found" });
-      let cacheaccountinfo = JSON.parse(await cacheaccount.text());
-
-      if (!cacheaccountinfo.attributes.root_admin) return res.status(403).json({ error: "Unauthorized" });
-
       const nodes = await db.get("radar-nodes") || [];
 
       // Collect stats from all online nodes
       const nodeStats = await Promise.all(nodes.map(async (node) => {
         try {
-          const response = await fetch(`http://${node.fqdn}:${node.port}/api/stats`, {
+          const response = await axios.get(`http://${node.fqdn}:${node.port}/api/stats`, {
             timeout: 5000
           });
-          const stats = await response.json();
           return {
             node: node.name,
             status: "online",
-            stats
+            stats: response.data
           };
         } catch (error) {
           return {
@@ -777,36 +609,21 @@ module.exports.load = async function (app, db) {
 
   // Get detections from a specific node
   app.get("/api/radar/nodes/:id/detections", async (req, res) => {
-    if (!req.session.pterodactyl) return res.status(403).json({ error: "Unauthorized" });
+    if (!await checkAdmin(req, res, settings, db)) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
 
     try {
-      let cacheaccount = await fetch(
-        `${settings.pterodactyl.domain}/api/application/users/${await db.get("users-" + req.session.userinfo.id)}?include=servers`,
-        {
-          method: "get",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${settings.pterodactyl.key}`
-          }
-        }
-      );
-
-      if ((await cacheaccount.statusText) == "Not Found") return res.status(404).json({ error: "User not found" });
-      let cacheaccountinfo = JSON.parse(await cacheaccount.text());
-
-      if (!cacheaccountinfo.attributes.root_admin) return res.status(403).json({ error: "Unauthorized" });
-
       const nodes = await db.get("radar-nodes") || [];
       const node = nodes.find(n => n.id === req.params.id);
 
       if (!node) return res.status(404).json({ error: "Node not found" });
 
       try {
-        const response = await fetch(`http://${node.fqdn}:${node.port}/api/detections`, {
+        const response = await axios.get(`http://${node.fqdn}:${node.port}/api/detections`, {
           timeout: 5000
         });
-        const detections = await response.json();
-        res.json(detections);
+        res.json(response.data);
       } catch (error) {
         res.status(502).json({ error: "Unable to connect to Radar node" });
       }
@@ -817,42 +634,16 @@ module.exports.load = async function (app, db) {
   });
 
   app.get("/api/servers", async (req, res) => {
-    if (!req.session.pterodactyl) return res.status(403).json({ error: "Unauthorized" });
+    if (!await checkAdmin(req, res, settings, db)) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
 
     try {
-      let cacheaccount = await fetch(
-        `${settings.pterodactyl.domain}/api/application/users/${await db.get("users-" + req.session.userinfo.id)}?include=servers`,
-        {
-          method: "get",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${settings.pterodactyl.key}`
-          }
-        }
-      );
-
-      if ((await cacheaccount.statusText) == "Not Found") return res.status(404).json({ error: "User not found" });
-      let cacheaccountinfo = JSON.parse(await cacheaccount.text());
-
-      if (!cacheaccountinfo.attributes.root_admin) return res.status(403).json({ error: "Unauthorized" });
-
       // Get servers with pagination
       const page = parseInt(req.query.page) || 1;
-      const limit = parseInt(req.query.limit) || 50;
 
-      const serversResponse = await fetch(
-        `${settings.pterodactyl.domain}/api/application/servers?page=${page}&per_page=10000`,
-        {
-          method: "get",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${settings.pterodactyl.key}`
-          }
-        }
-      );
-
-      const servers = await serversResponse.json();
-      res.json(servers);
+      const serversResponse = await pteroApi.get(`/api/application/servers?page=${page}&per_page=10000`);
+      res.json(serversResponse.data);
     } catch (error) {
       console.error("Error fetching servers:", error);
       res.status(500).json({ error: "Internal server error" });
@@ -860,77 +651,29 @@ module.exports.load = async function (app, db) {
   });
 
   app.get("/api/servers/:id", async (req, res) => {
-    if (!req.session.pterodactyl) return res.status(403).json({ error: "Unauthorized" });
+    if (!await checkAdmin(req, res, settings, db)) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
 
     try {
-      let cacheaccount = await fetch(
-        `${settings.pterodactyl.domain}/api/application/users/${await db.get("users-" + req.session.userinfo.id)}?include=servers`,
-        {
-          method: "get",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${settings.pterodactyl.key}`
-          }
-        }
-      );
-
-      if ((await cacheaccount.statusText) == "Not Found") return res.status(404).json({ error: "User not found" });
-      let cacheaccountinfo = JSON.parse(await cacheaccount.text());
-
-      if (!cacheaccountinfo.attributes.root_admin) return res.status(403).json({ error: "Unauthorized" });
-
-      const serverResponse = await fetch(
-        `${settings.pterodactyl.domain}/api/application/servers/${req.params.id}?include=allocations,user,subusers,pack,nest,egg,variables,location,node,databases`,
-        {
-          method: "get",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${settings.pterodactyl.key}`
-          }
-        }
-      );
-
-      if (serverResponse.status === 404) return res.status(404).json({ error: "Server not found" });
-      const server = await serverResponse.json();
-      res.json(server);
+      const serverResponse = await pteroApi.get(`/api/application/servers/${req.params.id}?include=allocations,user,subusers,pack,nest,egg,variables,location,node,databases`);
+      res.json(serverResponse.data);
     } catch (error) {
+      if (error.response?.status === 404) {
+        return res.status(404).json({ error: "Server not found" });
+      }
       console.error("Error fetching server:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });
 
   app.post("/api/servers/:id/suspend", async (req, res) => {
-    if (!req.session.pterodactyl) return res.status(403).json({ error: "Unauthorized" });
+    if (!await checkAdmin(req, res, settings, db)) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
 
     try {
-      let cacheaccount = await fetch(
-        `${settings.pterodactyl.domain}/api/application/users/${await db.get("users-" + req.session.userinfo.id)}?include=servers`,
-        {
-          method: "get",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${settings.pterodactyl.key}`
-          }
-        }
-      );
-
-      if ((await cacheaccount.statusText) == "Not Found") return res.status(404).json({ error: "User not found" });
-      let cacheaccountinfo = JSON.parse(await cacheaccount.text());
-
-      if (!cacheaccountinfo.attributes.root_admin) return res.status(403).json({ error: "Unauthorized" });
-
-      const response = await fetch(
-        `${settings.pterodactyl.domain}/api/application/servers/${req.params.id}/suspend`,
-        {
-          method: "post",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${settings.pterodactyl.key}`
-          }
-        }
-      );
-
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      await pteroApi.post(`/api/application/servers/${req.params.id}/suspend`);
       res.json({ success: true });
     } catch (error) {
       console.error("Error suspending server:", error);
@@ -939,37 +682,12 @@ module.exports.load = async function (app, db) {
   });
 
   app.post("/api/servers/:id/unsuspend", async (req, res) => {
-    if (!req.session.pterodactyl) return res.status(403).json({ error: "Unauthorized" });
+    if (!await checkAdmin(req, res, settings, db)) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
 
     try {
-      let cacheaccount = await fetch(
-        `${settings.pterodactyl.domain}/api/application/users/${await db.get("users-" + req.session.userinfo.id)}?include=servers`,
-        {
-          method: "get",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${settings.pterodactyl.key}`
-          }
-        }
-      );
-
-      if ((await cacheaccount.statusText) == "Not Found") return res.status(404).json({ error: "User not found" });
-      let cacheaccountinfo = JSON.parse(await cacheaccount.text());
-
-      if (!cacheaccountinfo.attributes.root_admin) return res.status(403).json({ error: "Unauthorized" });
-
-      const response = await fetch(
-        `${settings.pterodactyl.domain}/api/application/servers/${req.params.id}/unsuspend`,
-        {
-          method: "post",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${settings.pterodactyl.key}`
-          }
-        }
-      );
-
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      await pteroApi.post(`/api/application/servers/${req.params.id}/unsuspend`);
       res.json({ success: true });
     } catch (error) {
       console.error("Error unsuspending server:", error);
@@ -978,39 +696,17 @@ module.exports.load = async function (app, db) {
   });
 
   app.delete("/api/servers/:id", async (req, res) => {
-    if (!req.session.pterodactyl) return res.status(403).json({ error: "Unauthorized" });
+    if (!await checkAdmin(req, res, settings, db)) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
 
     try {
-      let cacheaccount = await fetch(
-        `${settings.pterodactyl.domain}/api/application/users/${await db.get("users-" + req.session.userinfo.id)}?include=servers`,
-        {
-          method: "get",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${settings.pterodactyl.key}`
-          }
-        }
-      );
-
-      if ((await cacheaccount.statusText) == "Not Found") return res.status(404).json({ error: "User not found" });
-      let cacheaccountinfo = JSON.parse(await cacheaccount.text());
-
-      if (!cacheaccountinfo.attributes.root_admin) return res.status(403).json({ error: "Unauthorized" });
-
       const force = req.query.force === 'true';
       const endpoint = force ?
-        `${settings.pterodactyl.domain}/api/application/servers/${req.params.id}/force` :
-        `${settings.pterodactyl.domain}/api/application/servers/${req.params.id}`;
+        `/api/application/servers/${req.params.id}/force` :
+        `/api/application/servers/${req.params.id}`;
 
-      const response = await fetch(endpoint, {
-        method: "delete",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${settings.pterodactyl.key}`
-        }
-      });
-
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      await pteroApi.delete(endpoint);
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting server:", error);
@@ -1020,41 +716,15 @@ module.exports.load = async function (app, db) {
 
   // Nests endpoints
   app.get("/api/nests", async (req, res) => {
-    if (!req.session.pterodactyl) return res.status(403).json({ error: "Unauthorized" });
+    if (!await checkAdmin(req, res, settings, db)) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
 
     try {
-      let cacheaccount = await fetch(
-        `${settings.pterodactyl.domain}/api/application/users/${await db.get("users-" + req.session.userinfo.id)}?include=servers`,
-        {
-          method: "get",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${settings.pterodactyl.key}`
-          }
-        }
-      );
-
-      if ((await cacheaccount.statusText) == "Not Found") return res.status(404).json({ error: "User not found" });
-      let cacheaccountinfo = JSON.parse(await cacheaccount.text());
-
-      if (!cacheaccountinfo.attributes.root_admin) return res.status(403).json({ error: "Unauthorized" });
-
       const page = parseInt(req.query.page) || 1;
-      const limit = parseInt(req.query.limit) || 50;
 
-      const response = await fetch(
-        `${settings.pterodactyl.domain}/api/application/nests?page=${page}&per_page=10000`,
-        {
-          method: "get",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${settings.pterodactyl.key}`
-          }
-        }
-      );
-
-      const nests = await response.json();
-      res.json(nests);
+      const response = await pteroApi.get(`/api/application/nests?page=${page}&per_page=10000`);
+      res.json(response.data);
     } catch (error) {
       console.error("Error fetching nests:", error);
       res.status(500).json({ error: "Internal server error" });
@@ -1062,45 +732,20 @@ module.exports.load = async function (app, db) {
   });
 
   app.get("/api/nests/:id/eggs", async (req, res) => {
-    if (!req.session.pterodactyl) return res.status(403).json({ error: "Unauthorized" });
+    if (!await checkAdmin(req, res, settings, db)) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
 
     try {
-      let cacheaccount = await fetch(
-        `${settings.pterodactyl.domain}/api/application/users/${await db.get("users-" + req.session.userinfo.id)}?include=servers`,
-        {
-          method: "get",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${settings.pterodactyl.key}`
-          }
-        }
-      );
-
-      if ((await cacheaccount.statusText) == "Not Found") return res.status(404).json({ error: "User not found" });
-      let cacheaccountinfo = JSON.parse(await cacheaccount.text());
-
-      if (!cacheaccountinfo.attributes.root_admin) return res.status(403).json({ error: "Unauthorized" });
-
       const page = parseInt(req.query.page) || 1;
-      const limit = parseInt(req.query.limit) || 50;
-
       const includes = req.query.include ? req.query.include.split(',').join(',') : 'nest,servers,config,script,variables';
 
-      const response = await fetch(
-        `${settings.pterodactyl.domain}/api/application/nests/${req.params.id}/eggs?include=${includes}&page=${page}&per_page=10000`,
-        {
-          method: "get",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${settings.pterodactyl.key}`
-          }
-        }
-      );
-
-      if (response.status === 404) return res.status(404).json({ error: "Nest not found" });
-      const eggs = await response.json();
-      res.json(eggs);
+      const response = await pteroApi.get(`/api/application/nests/${req.params.id}/eggs?include=${includes}&page=${page}&per_page=10000`);
+      res.json(response.data);
     } catch (error) {
+      if (error.response?.status === 404) {
+        return res.status(404).json({ error: "Nest not found" });
+      }
       console.error("Error fetching eggs:", error);
       res.status(500).json({ error: "Internal server error" });
     }
@@ -1108,41 +753,15 @@ module.exports.load = async function (app, db) {
 
   // Users endpoints
   app.get("/api/users", async (req, res) => {
-    if (!req.session.pterodactyl) return res.status(403).json({ error: "Unauthorized" });
+    if (!await checkAdmin(req, res, settings, db)) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
 
     try {
-      let cacheaccount = await fetch(
-        `${settings.pterodactyl.domain}/api/application/users/${await db.get("users-" + req.session.userinfo.id)}?include=servers`,
-        {
-          method: "get",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${settings.pterodactyl.key}`
-          }
-        }
-      );
-
-      if ((await cacheaccount.statusText) == "Not Found") return res.status(404).json({ error: "User not found" });
-      let cacheaccountinfo = JSON.parse(await cacheaccount.text());
-
-      if (!cacheaccountinfo.attributes.root_admin) return res.status(403).json({ error: "Unauthorized" });
-
       const page = parseInt(req.query.page) || 1;
-      const limit = parseInt(req.query.limit) || 50;
 
-      const response = await fetch(
-        `${settings.pterodactyl.domain}/api/application/users?page=${page}&per_page=10000`,
-        {
-          method: "get",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${settings.pterodactyl.key}`
-          }
-        }
-      );
-
-      const users = await response.json();
-      res.json(users);
+      const response = await pteroApi.get(`/api/application/users?page=${page}&per_page=10000`);
+      res.json(response.data);
     } catch (error) {
       console.error("Error fetching users:", error);
       res.status(500).json({ error: "Internal server error" });
@@ -1150,123 +769,59 @@ module.exports.load = async function (app, db) {
   });
 
   app.get("/api/users/:id", async (req, res) => {
-    if (!req.session.pterodactyl) return res.status(403).json({ error: "Unauthorized" });
+    if (!await checkAdmin(req, res, settings, db)) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
 
     try {
-      let cacheaccount = await fetch(
-        `${settings.pterodactyl.domain}/api/application/users/${await db.get("users-" + req.session.userinfo.id)}?include=servers`,
-        {
-          method: "get",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${settings.pterodactyl.key}`
-          }
-        }
-      );
-
-      if ((await cacheaccount.statusText) == "Not Found") return res.status(404).json({ error: "User not found" });
-      let cacheaccountinfo = JSON.parse(await cacheaccount.text());
-
-      if (!cacheaccountinfo.attributes.root_admin) return res.status(403).json({ error: "Unauthorized" });
-
-      const response = await fetch(
-        `${settings.pterodactyl.domain}/api/application/users/${req.params.id}?include=servers`,
-        {
-          method: "get",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${settings.pterodactyl.key}`
-          }
-        }
-      );
-
-      if (response.status === 404) return res.status(404).json({ error: "User not found" });
-      const user = await response.json();
-      res.json(user);
+      const response = await pteroApi.get(`/api/application/users/${req.params.id}?include=servers`);
+      res.json(response.data);
     } catch (error) {
+      if (error.response?.status === 404) {
+        return res.status(404).json({ error: "User not found" });
+      }
       console.error("Error fetching user:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });
 
   app.post("/api/users", async (req, res) => {
-    if (!req.session.pterodactyl) return res.status(403).json({ error: "Unauthorized" });
+    if (!await checkAdmin(req, res, settings, db)) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
 
     try {
-      let cacheaccount = await fetch(
-        `${settings.pterodactyl.domain}/api/application/users/${await db.get("users-" + req.session.userinfo.id)}?include=servers`,
-        {
-          method: "get",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${settings.pterodactyl.key}`
-          }
-        }
-      );
-
-      if ((await cacheaccount.statusText) == "Not Found") return res.status(404).json({ error: "User not found" });
-      let cacheaccountinfo = JSON.parse(await cacheaccount.text());
-
-      if (!cacheaccountinfo.attributes.root_admin) return res.status(403).json({ error: "Unauthorized" });
-
       const { email, username, first_name, last_name, password } = req.body;
 
       if (!email || !username || !first_name || !last_name || !password) {
         return res.status(400).json({ error: "Missing required fields" });
       }
 
-      const response = await fetch(
-        `${settings.pterodactyl.domain}/api/application/users`,
-        {
-          method: "post",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${settings.pterodactyl.key}`
-          },
-          body: JSON.stringify({
-            email,
-            username,
-            first_name,
-            last_name,
-            password,
-            root_admin: false // Default to non-admin for safety
-          })
-        }
-      );
+      const response = await pteroApi.post('/api/application/users', {
+        email,
+        username,
+        first_name,
+        last_name,
+        password,
+        root_admin: false // Default to non-admin for safety
+      });
 
-      if (!response.ok) {
-        const error = await response.json();
-        return res.status(response.status).json(error);
-      }
-
-      const newUser = await response.json();
-      res.status(201).json(newUser);
+      res.status(201).json(response.data);
     } catch (error) {
+      if (error.response) {
+        return res.status(error.response.status).json(error.response.data);
+      }
       console.error("Error creating user:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });
 
   app.patch("/api/users/:id", async (req, res) => {
-    if (!req.session.pterodactyl) return res.status(403).json({ error: "Unauthorized" });
+    if (!await checkAdmin(req, res, settings, db)) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
 
     try {
-      let cacheaccount = await fetch(
-        `${settings.pterodactyl.domain}/api/application/users/${await db.get("users-" + req.session.userinfo.id)}?include=servers`,
-        {
-          method: "get",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${settings.pterodactyl.key}`
-          }
-        }
-      );
-
-      if ((await cacheaccount.statusText) == "Not Found") return res.status(404).json({ error: "User not found" });
-      let cacheaccountinfo = JSON.parse(await cacheaccount.text());
-
-      if (!cacheaccountinfo.attributes.root_admin) return res.status(403).json({ error: "Unauthorized" });
-
       const { email, username, first_name, last_name, password } = req.body;
       const updateData = {};
 
@@ -1277,71 +832,35 @@ module.exports.load = async function (app, db) {
       if (last_name) updateData.last_name = last_name;
       if (password) updateData.password = password;
 
-      const response = await fetch(
-        `${settings.pterodactyl.domain}/api/application/users/${req.params.id}`,
-        {
-          method: "patch",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${settings.pterodactyl.key}`
-          },
-          body: JSON.stringify(updateData)
-        }
-      );
-
-      if (response.status === 404) return res.status(404).json({ error: "User not found" });
-      if (!response.ok) {
-        const error = await response.json();
-        return res.status(response.status).json(error);
-      }
-
-      const updatedUser = await response.json();
-      res.json(updatedUser);
+      const response = await pteroApi.patch(`/api/application/users/${req.params.id}`, updateData);
+      res.json(response.data);
     } catch (error) {
+      if (error.response?.status === 404) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      if (error.response) {
+        return res.status(error.response.status).json(error.response.data);
+      }
       console.error("Error updating user:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });
 
   app.delete("/api/users/:id", async (req, res) => {
-    if (!req.session.pterodactyl) return res.status(403).json({ error: "Unauthorized" });
+    if (!await checkAdmin(req, res, settings, db)) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
 
     try {
-      let cacheaccount = await fetch(
-        `${settings.pterodactyl.domain}/api/application/users/${await db.get("users-" + req.session.userinfo.id)}?include=servers`,
-        {
-          method: "get",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${settings.pterodactyl.key}`
-          }
-        }
-      );
-
-      if ((await cacheaccount.statusText) == "Not Found") return res.status(404).json({ error: "User not found" });
-      let cacheaccountinfo = JSON.parse(await cacheaccount.text());
-
-      if (!cacheaccountinfo.attributes.root_admin) return res.status(403).json({ error: "Unauthorized" });
-
-      const response = await fetch(
-        `${settings.pterodactyl.domain}/api/application/users/${req.params.id}`,
-        {
-          method: "delete",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${settings.pterodactyl.key}`
-          }
-        }
-      );
-
-      if (response.status === 404) return res.status(404).json({ error: "User not found" });
-      if (!response.ok) {
-        const error = await response.json();
-        return res.status(response.status).json(error);
-      }
-
+      await pteroApi.delete(`/api/application/users/${req.params.id}`);
       res.status(204).send();
     } catch (error) {
+      if (error.response?.status === 404) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      if (error.response) {
+        return res.status(error.response.status).json(error.response.data);
+      }
       console.error("Error deleting user:", error);
       res.status(500).json({ error: "Internal server error" });
     }
@@ -1349,41 +868,15 @@ module.exports.load = async function (app, db) {
 
   // Nodes endpoints
   app.get("/api/nodes", async (req, res) => {
-    if (!req.session.pterodactyl) return res.status(403).json({ error: "Unauthorized" });
+    if (!await checkAdmin(req, res, settings, db)) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
 
     try {
-      let cacheaccount = await fetch(
-        `${settings.pterodactyl.domain}/api/application/users/${await db.get("users-" + req.session.userinfo.id)}?include=servers`,
-        {
-          method: "get",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${settings.pterodactyl.key}`
-          }
-        }
-      );
-
-      if ((await cacheaccount.statusText) == "Not Found") return res.status(404).json({ error: "User not found" });
-      let cacheaccountinfo = JSON.parse(await cacheaccount.text());
-
-      if (!cacheaccountinfo.attributes.root_admin) return res.status(403).json({ error: "Unauthorized" });
-
       const page = parseInt(req.query.page) || 1;
-      const limit = parseInt(req.query.limit) || 50;
 
-      const response = await fetch(
-        `${settings.pterodactyl.domain}/api/application/nodes?page=${page}&per_page=10000`,
-        {
-          method: "get",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${settings.pterodactyl.key}`
-          }
-        }
-      );
-
-      const nodes = await response.json();
-      res.json(nodes);
+      const response = await pteroApi.get(`/api/application/nodes?page=${page}&per_page=10000`);
+      res.json(response.data);
     } catch (error) {
       console.error("Error fetching nodes:", error);
       res.status(500).json({ error: "Internal server error" });
@@ -1391,40 +884,17 @@ module.exports.load = async function (app, db) {
   });
 
   app.get("/api/nodes/:id", async (req, res) => {
-    if (!req.session.pterodactyl) return res.status(403).json({ error: "Unauthorized" });
+    if (!await checkAdmin(req, res, settings, db)) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
 
     try {
-      let cacheaccount = await fetch(
-        `${settings.pterodactyl.domain}/api/application/users/${await db.get("users-" + req.session.userinfo.id)}?include=servers`,
-        {
-          method: "get",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${settings.pterodactyl.key}`
-          }
-        }
-      );
-
-      if ((await cacheaccount.statusText) == "Not Found") return res.status(404).json({ error: "User not found" });
-      let cacheaccountinfo = JSON.parse(await cacheaccount.text());
-
-      if (!cacheaccountinfo.attributes.root_admin) return res.status(403).json({ error: "Unauthorized" });
-
-      const response = await fetch(
-        `${settings.pterodactyl.domain}/api/application/nodes/${req.params.id}?include=allocations,location,servers`,
-        {
-          method: "get",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${settings.pterodactyl.key}`
-          }
-        }
-      );
-
-      if (response.status === 404) return res.status(404).json({ error: "Node not found" });
-      const node = await response.json();
-      res.json(node);
+      const response = await pteroApi.get(`/api/application/nodes/${req.params.id}?include=allocations,location,servers`);
+      res.json(response.data);
     } catch (error) {
+      if (error.response?.status === 404) {
+        return res.status(404).json({ error: "Node not found" });
+      }
       console.error("Error fetching node:", error);
       res.status(500).json({ error: "Internal server error" });
     }
@@ -1432,40 +902,17 @@ module.exports.load = async function (app, db) {
 
   // Get node configuration details
   app.get("/api/nodes/:id/configuration", async (req, res) => {
-    if (!req.session.pterodactyl) return res.status(403).json({ error: "Unauthorized" });
+    if (!await checkAdmin(req, res, settings, db)) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
 
     try {
-      let cacheaccount = await fetch(
-        `${settings.pterodactyl.domain}/api/application/users/${await db.get("users-" + req.session.userinfo.id)}?include=servers`,
-        {
-          method: "get",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${settings.pterodactyl.key}`
-          }
-        }
-      );
-
-      if ((await cacheaccount.statusText) == "Not Found") return res.status(404).json({ error: "User not found" });
-      let cacheaccountinfo = JSON.parse(await cacheaccount.text());
-
-      if (!cacheaccountinfo.attributes.root_admin) return res.status(403).json({ error: "Unauthorized" });
-
-      const response = await fetch(
-        `${settings.pterodactyl.domain}/api/application/nodes/${req.params.id}/configuration`,
-        {
-          method: "get",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${settings.pterodactyl.key}`
-          }
-        }
-      );
-
-      if (response.status === 404) return res.status(404).json({ error: "Node not found" });
-      const config = await response.json();
-      res.json(config);
+      const response = await pteroApi.get(`/api/application/nodes/${req.params.id}/configuration`);
+      res.json(response.data);
     } catch (error) {
+      if (error.response?.status === 404) {
+        return res.status(404).json({ error: "Node not found" });
+      }
       console.error("Error fetching node configuration:", error);
       res.status(500).json({ error: "Internal server error" });
     }
@@ -1823,20 +1270,9 @@ async function suspendIfNeeded(userId, settings, db) {
   const pterodactylId = await db.get("users-" + userId);
 
   try {
-    const userResponse = await fetch(
-      `${settings.pterodactyl.domain}/api/application/users/${pterodactylId}?include=servers`,
-      {
-        method: "get",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${settings.pterodactyl.key}`
-        }
-      }
-    );
+    const userResponse = await pteroApi.get(`/api/application/users/${pterodactylId}?include=servers`);
 
-    if (!userResponse.ok) return;
-
-    const userData = await userResponse.json();
+    const userData = userResponse.data;
     const servers = userData.attributes.relationships.servers.data;
 
     // Calculate resource usage
@@ -1860,16 +1296,7 @@ async function suspendIfNeeded(userId, settings, db) {
 
     // Suspend/unsuspend servers as needed
     for (const server of servers) {
-      await fetch(
-        `${settings.pterodactyl.domain}/api/application/servers/${server.attributes.id}/${isOverLimit ? 'suspend' : 'unsuspend'}`,
-        {
-          method: "post",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${settings.pterodactyl.key}`
-          }
-        }
-      );
+      await pteroApi.post(`/api/application/servers/${server.attributes.id}/${isOverLimit ? 'suspend' : 'unsuspend'}`);
     }
   } catch (error) {
     console.error("Error in suspendIfNeeded:", error);

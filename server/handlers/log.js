@@ -1,6 +1,6 @@
 const loadConfig = require("../handlers/config");
 const settings = loadConfig("./config.toml");
-const fetch = require('node-fetch')
+const axios = require('axios');
 
 /**
  * Log an action to a Discord webhook.
@@ -13,28 +13,21 @@ module.exports = (action, message) => {
 
     console.log(action, message);
 
-    fetch(settings.logging.webhook, {
-        method: 'POST',
-        headers: {
-            'content-type': 'application/json'
-        },
-        body: JSON.stringify({
-            embeds: [
-                {
-                    color: hexToDecimal('#FFFFFF'),
-                    title: `Event: \`${action}\``,
-                    description: message,
-                    author: {
-                        name: 'Heliactyl Logging'
-                    },
-                    thumbnail: {
-                        url: 'https://atqr.pages.dev/favicon2.png' // This is the default Heliactyl logo, you can change it if you want.
-                    }
+    axios.post(settings.logging.webhook, {
+        embeds: [
+            {
+                color: hexToDecimal('#FFFFFF'),
+                title: `Event: \`${action}\``,
+                description: message,
+                author: {
+                    name: 'Heliactyl Logging'
+                },
+                thumbnail: {
+                    url: 'https://atqr.pages.dev/favicon2.png' // This is the default Heliactyl logo, you can change it if you want.
                 }
-            ]
-        })
-    })
-        .catch(() => { })
+            }
+        ]
+    }).catch(() => { })
 }
 
 function hexToDecimal(hex) {
