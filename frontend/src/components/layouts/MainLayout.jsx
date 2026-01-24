@@ -10,7 +10,7 @@ import {
   ListBulletIcon, ArrowLeftIcon, ArrowTrendingUpIcon, GiftIcon,
   FingerPrintIcon, HomeIcon, BoltIcon, PaperAirplaneIcon, ArrowDownLeftIcon,
   ChevronDownIcon, EllipsisVerticalIcon, LinkIcon,
-  ShieldCheckIcon, TicketIcon, SignalIcon
+  ShieldCheckIcon, TicketIcon, SignalIcon, ServerIcon
 } from '@heroicons/react/24/outline';
 
 // Sidebar context for visibility management
@@ -170,7 +170,8 @@ const MainLayout = () => {
 
   // Navigation items for both Mantle sections
   const iconNavItems = [
-    { icon: HomeIcon, label: 'Dashboard', path: '/dashboard' },
+    { icon: HomeIcon, label: 'Dashboard', path: '/' },
+    { icon: ServerIcon, label: 'Servers', path: '/servers' },
     { icon: WalletIcon, label: 'Wallet', path: '/wallet' },
     { icon: CircleStackIcon, label: 'Store', path: '/coins/store' },
     { icon: GiftIcon, label: 'Daily rewards', path: '/coins/daily' },

@@ -3,14 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import {
-  ServerIcon, PlusIcon, CpuChipIcon,
-  ChartPieIcon, ArchiveBoxIcon, ArrowPathIcon,
-  ExclamationCircleIcon, CommandLineIcon, PencilIcon,
-  TrashIcon, UsersIcon, CheckIcon, EllipsisVerticalIcon,
-  BoltIcon
+  ServerIcon, PlusIcon, 
+  ArrowPathIcon, ExclamationCircleIcon,
+  UsersIcon, MagnifyingGlassIcon
 } from '@heroicons/react/24/outline';
-import { ChartPie } from 'lucide-react';
-import { FAQSection } from '../components/FAQSection';
 
 // Utility function to format bytes
 function formatBytes(bytes, decimals = 2) {
@@ -20,48 +16,6 @@ function formatBytes(bytes, decimals = 2) {
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
-}
-
-function ResourceCard({ icon: Icon, title, used, total, unit, isBoosted }) {
-  const percentage = total ? (used / total) * 100 : 0;
-  // If boosted, use a different color scheme or just show it's okay to be over 100%
-  const colorClass = percentage > 100 && !isBoosted ? 'bg-red-500' : 
-                     percentage > 90 && !isBoosted ? 'bg-red-500' : 
-                     percentage > 70 ? 'bg-amber-500' : 'bg-neutral-300';
-
-  return (
-    <div className={`border ${isBoosted ? 'border-amber-500/30 bg-amber-500/5' : 'border-[#2e3337]/50 bg-transparent'} shadow-xs rounded-lg p-4 relative overflow-hidden`}>
-      <div className="flex items-center justify-between pb-2 mt-1 relative z-0">
-        <div className="flex items-center gap-2">
-          <h3 className={`text-sm font-medium flex items-center gap-2 ${isBoosted ? 'text-amber-500' : ''}`}>
-            {title}
-            {isBoosted && <BoltIcon className="w-3.5 h-3.5 animate-pulse" />}
-          </h3>
-        </div>
-        <span className="text-xs text-[#95a1ad]">
-          {used}{unit} / {total}{unit}
-        </span>
-      </div>
-      <div>
-        <div className="h-1 bg-[#202229] rounded-full overflow-hidden">
-          <div
-            className={`h-full ${isBoosted ? 'bg-gradient-to-r from-amber-600 to-amber-400' : colorClass} rounded-full`}
-            style={{ width: `${Math.min(percentage, 100)}%` }}
-          ></div>
-        </div>
-        <div className="flex justify-between items-center mt-2">
-          <p className="text-xs text-[#95a1ad]">
-            {percentage.toFixed(1)}% utilized
-          </p>
-          {isBoosted && (
-            <span className="text-[0.60rem] text-amber-500/80 font-medium uppercase tracking-wider mr-1">
-              ACTIVE BOOST
-            </span>
-          )}
-        </div>
-      </div>
-    </div>
-  );
 }
 
 function CreateServerModal({ isOpen, onClose }) {
@@ -85,11 +39,10 @@ function CreateServerModal({ isOpen, onClose }) {
   useEffect(() => {
     if (isOpen) {
       setIsVisible(true);
-      // Small delay to ensure DOM updates before starting animation
       setTimeout(() => setAnimationClass('opacity-100 scale-100'), 10);
     } else {
       setAnimationClass('opacity-0 scale-95');
-      setTimeout(() => setIsVisible(false), 300); // Match with transition duration
+      setTimeout(() => setIsVisible(false), 300);
     }
   }, [isOpen]);
 
@@ -146,8 +99,7 @@ function CreateServerModal({ isOpen, onClose }) {
       });
 
       onClose();
-      // Redirect to servers page or reload
-      window.location.href = '/servers';
+      window.location.reload(); // Simple reload to refresh list
     } catch (err) {
       setError(err.response?.data?.error || err.message);
     } finally {
@@ -322,6 +274,108 @@ function CreateServerModal({ isOpen, onClose }) {
   );
 }
 
+function ServerCard({ server, wsStatus, stats }) {
+  const navigate = useNavigate();
+
+  const statusColors = {
+    running: 'bg-emerald-500',
+    starting: 'bg-amber-500',
+    stopping: 'bg-amber-500',
+    offline: 'bg-neutral-500'
+  };
+
+  const {
+    limits = {}
+  } = server?.attributes || {};
+
+  let globalIdentifier;
+  let globalName;
+
+  if (server?.attributes) {
+    globalIdentifier = server.attributes.identifier;
+  } else {
+    globalIdentifier = server.id;
+  }
+
+  if (server?.attributes) {
+    globalName = server.attributes.name;
+  } else {
+    globalName = server.name;
+  }
+
+  const status = wsStatus?.[globalIdentifier] || 'offline';
+  const serverStats = stats?.[globalIdentifier] || { cpu: 0, memory: 0, disk: 0 };
+
+  const handleCardClick = () => {
+    navigate(`/server/${globalIdentifier}/overview`);
+  };
+
+  return (
+    <div
+      className="border border-[#2e3337]/50 hover:scale-[1.01] hover:border-[#2e3337] rounded-lg bg-transparent transition duration-200 hover:border-white/10 cursor-pointer relative group"
+      onClick={handleCardClick}
+    >
+      <div className="p-4 pb-3 flex items-start justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-[#202229] border border-white/5 group-hover:border-white/10 transition-colors">
+            <ServerIcon className="w-5 h-5 text-[#95a1ad]" />
+          </div>
+          <div>
+            <h3 className="font-medium text-sm">{globalName || 'Unnamed Server'}</h3>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <div className={`h-1.5 w-1.5 rounded-full ${statusColors[status]}`}></div>
+              <p className="text-xs text-[#95a1ad]">
+                {status.charAt(0).toUpperCase() + status.slice(1)}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="p-4 pt-2 pb-3 space-y-4">
+        <div>
+          <div className="flex justify-between text-xs text-[#95a1ad] mb-1.5">
+            <span>Memory</span>
+            <span>{serverStats.memory?.toFixed(0) || 0} / {limits.memory || 0} MB</span>
+          </div>
+          <div className="h-1 bg-[#202229] rounded-full overflow-hidden">
+            <div
+              className="h-full bg-neutral-300 rounded-full"
+              style={{ width: `${limits.memory ? Math.min((serverStats.memory / limits.memory) * 100, 100) : 0}%` }}
+            ></div>
+          </div>
+        </div>
+
+        <div>
+          <div className="flex justify-between text-xs text-[#95a1ad] mb-1.5">
+            <span>CPU</span>
+            <span>{serverStats.cpu?.toFixed(1) || 0} / {limits.cpu || 0}%</span>
+          </div>
+          <div className="h-1 bg-[#202229] rounded-full overflow-hidden">
+            <div
+              className="h-full bg-neutral-300 rounded-full"
+              style={{ width: `${limits.cpu ? Math.min((serverStats.cpu / limits.cpu) * 100, 100) : 0}%` }}
+            ></div>
+          </div>
+        </div>
+
+        <div>
+          <div className="flex justify-between text-xs text-[#95a1ad] mb-1.5">
+            <span>Disk</span>
+            <span>{formatBytes(serverStats.disk || 0)} / {formatBytes((limits.disk || 0) * 1024 * 1024)}</span>
+          </div>
+          <div className="h-1 bg-[#202229] rounded-full overflow-hidden">
+            <div
+              className="h-full bg-neutral-300 rounded-full"
+              style={{ width: `${limits.disk ? Math.min((serverStats.disk / (limits.disk * 1024 * 1024)) * 100, 100) : 0}%` }}
+            ></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function LoadingSkeleton() {
   return (
     <div className="space-y-8 p-6 max-w-screen-2xl mx-auto">
@@ -330,121 +384,220 @@ function LoadingSkeleton() {
         <div className="h-9 w-32 bg-[#202229] rounded-md animate-pulse"></div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="border border-[#2e3337] rounded-lg p-4">
-            <div className="flex items-center pb-2">
-              <div className="w-8 h-8 rounded-lg bg-[#202229] animate-pulse mr-2"></div>
-              <div className="h-6 w-32 bg-[#202229] rounded animate-pulse"></div>
-            </div>
-            <div className="h-1 w-full bg-[#202229] rounded-full animate-pulse"></div>
-            <div className="h-4 w-20 mt-2 bg-[#202229] rounded animate-pulse"></div>
-          </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {[...Array(6)].map((_, i) => (
+          <div key={i} className="h-[220px] border border-[#2e3337] rounded-lg bg-[#202229]/20 animate-pulse"></div>
         ))}
       </div>
     </div>
   );
 }
 
-export default function Dashboard() {
+export default function ServersPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [serverStatus, setServerStatus] = useState({});
+  const [serverStats, setServerStats] = useState({});
+  const socketsRef = useRef({});
 
-  const { data: resources, isLoading: loadingResources } = useQuery({
-    queryKey: ['resources'],
+  const { data: servers, isLoading: loadingServers } = useQuery({
+    queryKey: ['servers'],
     queryFn: async () => {
-      const { data } = await axios.get('/api/v5/resources');
+      const { data } = await axios.get('/api/v5/servers');
       return data;
     }
   });
 
-  const { data: activeBoosts } = useQuery({
-    queryKey: ['active-boosts'],
+  const { data: subuserServers, isLoading: loadingSubuserServers } = useQuery({
+    queryKey: ['subuser-servers'],
     queryFn: async () => {
-      const { data } = await axios.get('/api/boosts/active');
+      const { data } = await axios.get('/api/subuser-servers');
       return data;
-    },
-    // Don't block loading
-    retry: false
+    }
   });
 
-  // Calculate boosted resources
-  const boostedResources = {
-    ram: false,
-    cpu: false,
-    disk: false
-  };
+  useEffect(() => {
+    if (!servers && !subuserServers) return;
 
-  if (activeBoosts) {
-    Object.values(activeBoosts).forEach(serverBoosts => {
-      Object.values(serverBoosts).forEach(boost => {
-        if (boost.boostType === 'memory' || boost.boostType === 'performance' || boost.boostType === 'extreme') {
-          boostedResources.ram = true;
-        }
-        if (boost.boostType === 'cpu' || boost.boostType === 'performance' || boost.boostType === 'extreme') {
-          boostedResources.cpu = true;
-        }
-        if (boost.boostType === 'storage' || boost.boostType === 'performance' || boost.boostType === 'extreme') {
-          boostedResources.disk = true;
+    // Connect WebSockets for owned servers
+    if (Array.isArray(servers)) {
+      servers.forEach(server => {
+        if (!socketsRef.current[server.attributes.identifier]) {
+          connectWebSocket(server);
         }
       });
-    });
-  }
+    }
 
-  if (loadingResources) {
+    // Connect WebSockets for subuser servers
+    if (Array.isArray(subuserServers)) {
+      subuserServers.forEach(server => {
+        if (!socketsRef.current[server.id]) {
+          connectWebSocket(server);
+        }
+      });
+    }
+
+    return () => {
+      Object.values(socketsRef.current).forEach(ws => ws.close());
+      socketsRef.current = {};
+    };
+  }, [servers, subuserServers]);
+
+  const connectWebSocket = async (server) => {
+    try {
+      const serverId = server?.attributes?.identifier || server.id;
+      const { data: wsData } = await axios.get(`/api/server/${serverId}/websocket`);
+      const ws = new WebSocket(wsData.data.socket);
+
+      ws.onopen = () => {
+        ws.send(JSON.stringify({
+          event: "auth",
+          args: [wsData.data.token]
+        }));
+      };
+
+      ws.onmessage = (event) => {
+        const message = JSON.parse(event.data);
+        handleWebSocketMessage(message, serverId);
+      };
+
+      ws.onclose = () => {
+        delete socketsRef.current[serverId];
+        // Reconnect after 5 seconds if page is still open
+        // Note: Simple reconnect, ideally check if component mounted
+      };
+
+      socketsRef.current[serverId] = ws;
+    } catch (error) {
+      console.error(`WebSocket connection error for ${server?.attributes?.identifier || server.id}:`, error);
+    }
+  };
+
+  const handleWebSocketMessage = (message, serverId) => {
+    switch (message.event) {
+      case 'auth success':
+        socketsRef.current[serverId].send(JSON.stringify({
+          event: 'send stats',
+          args: [null]
+        }));
+        break;
+
+      case 'stats':
+        const statsData = JSON.parse(message.args[0]);
+        if (!statsData) return;
+
+        setServerStats(prev => ({
+          ...prev,
+          [serverId]: {
+            cpu: statsData.cpu_absolute || 0,
+            memory: statsData.memory_bytes / 1024 / 1024 || 0,
+            disk: statsData.disk_bytes || 0
+          }
+        }));
+        break;
+
+      case 'status':
+        setServerStatus(prev => ({
+          ...prev,
+          [serverId]: message.args[0]
+        }));
+        break;
+    }
+  };
+
+  // Filter servers
+  const filteredOwnedServers = Array.isArray(servers) 
+    ? servers.filter(s => s.attributes.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    : [];
+    
+  const filteredSubuserServers = Array.isArray(subuserServers)
+    ? subuserServers.filter(s => s.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    : [];
+
+  if (loadingServers || loadingSubuserServers) {
     return <LoadingSkeleton />;
   }
 
+  const hasSubuserServers = filteredSubuserServers.length > 0;
+  const hasOwnedServers = filteredOwnedServers.length > 0;
+
   return (
     <div className="space-y-8 p-6 max-w-screen-2xl mx-auto">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Dashboard</h1>
-        <button
-          onClick={() => setIsCreateModalOpen(true)}
-          className="px-4 py-2 bg-white text-black hover:bg-white/90 rounded-md font-medium text-sm transition active:scale-95 flex items-center gap-2"
-        >
-          <PlusIcon className="w-4 h-4" />
-          New Server
-        </button>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold">Servers</h1>
+          <p className="text-[#95a1ad]">Manage your instances and access subuser servers</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#95a1ad]" />
+            <input 
+              type="text" 
+              placeholder="Search servers..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 pr-4 py-2 bg-[#1a1c1e] border border-[#2e3337] rounded-md text-sm focus:outline-none focus:border-white/10 w-full sm:w-64"
+            />
+          </div>
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="px-4 py-2 bg-white text-black hover:bg-white/90 rounded-md font-medium text-sm transition active:scale-95 flex items-center gap-2 whitespace-nowrap"
+          >
+            <PlusIcon className="w-4 h-4" />
+            New Server
+          </button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-4 md:grid-cols-4 gap-4">
-        <ResourceCard
-          icon={ChartPieIcon}
-          title="Memory"
-          used={resources?.current?.ram / 1024 || 0}
-          total={resources?.limits?.ram / 1024 || 0}
-          unit="GB"
-          isBoosted={boostedResources.ram}
-        />
-        <ResourceCard
-          icon={CpuChipIcon}
-          title="CPU"
-          used={resources?.current?.cpu || 0}
-          total={resources?.limits?.cpu || 0}
-          unit="%"
-          isBoosted={boostedResources.cpu}
-        />
-        <ResourceCard
-          icon={ArchiveBoxIcon}
-          title="Storage"
-          used={resources?.current?.disk / 1024 || 0}
-          total={resources?.limits?.disk / 1024 || 0}
-          unit="GB"
-          isBoosted={boostedResources.disk}
-        />
-        <ResourceCard
-          icon={ServerIcon}
-          title="Servers"
-          used={resources?.current?.servers || 0}
-          total={resources?.limits?.servers || 0}
-          unit=""
-        />
+      <div className="space-y-8">
+        {/* Owned Servers Section */}
+        <div className="space-y-4">
+          <h2 className="text-lg font-medium flex items-center gap-2 text-[#95a1ad] uppercase text-xs tracking-wider">
+            <ServerIcon className="w-4 h-4" />
+            Your Servers
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredOwnedServers.map(server => (
+              <ServerCard
+                key={server.attributes.id}
+                server={server}
+                wsStatus={serverStatus}
+                stats={serverStats}
+              />
+            ))}
+
+            {filteredOwnedServers.length === 0 && (
+              <div className="col-span-full flex flex-col items-center justify-center p-12 text-center border border-[#2e3337] border-dashed rounded-lg bg-[#202229]/20">
+                <ServerIcon className="w-8 h-8 text-[#2e3337] mb-2" />
+                <p className="text-sm text-[#95a1ad]">
+                  {searchTerm ? 'No servers match your search.' : 'You don\'t have any servers yet.'}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Subuser Servers Section */}
+        {hasSubuserServers && (
+          <div className="space-y-4">
+            <h2 className="text-lg font-medium flex items-center gap-2 text-[#95a1ad] uppercase text-xs tracking-wider">
+              <UsersIcon className="w-4 h-4" />
+              Shared With You
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredSubuserServers.map(server => (
+                <ServerCard
+                  key={server.id}
+                  server={server}
+                  wsStatus={serverStatus}
+                  stats={serverStats}
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* FAQ Section */}
-      <FAQSection />
-
-      {/* Create Server Modal */}
       <CreateServerModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}

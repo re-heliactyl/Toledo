@@ -26,6 +26,7 @@ import Logs from './pages/server/Logs';
 import Website from './pages/Website';
 
 import Dashboard from './pages/Dashboard';
+import ServersPage from './pages/Servers';
 import Auth from './pages/Auth';
 import TwoFactorVerification from './pages/TwoFactorVerification';
 import NotFound from './pages/NotFound';
@@ -285,6 +286,7 @@ export default function App() {
 
             {/* Dashboard routes */}
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/servers" element={<ServersPage />} />
             <Route path="/coins/afk" element={<AFKPage />} />
             <Route path="/coins/store" element={<Store />} />
             <Route path="/coins/staking" element={<Staking />} />
