@@ -12,6 +12,8 @@ const db = new Database('sqlite://heliactyl.db');
 const getPteroUser = require('../../handlers/getPteroUser');
 const loadConfig = require("../../handlers/config");
 const settings = loadConfig("./config.toml");
+const NodeCache = require("node-cache");
+const serverCache = new NodeCache({ stdTTL: 60 });
 
 const workflowsFilePath = path.join(__dirname, "../../storage/workflows.json");
 
@@ -74,18 +76,23 @@ const ownsServer = async (req, res, next) => {
     // FIRST CHECK: Get fresh data from Pterodactyl API instead of using session data
     let isOwner = false;
     try {
-      // Get user's servers directly from Pterodactyl
-      const userResponse = await axios.get(
-        `${PANEL_URL}/api/application/users/${req.session.pterodactyl.id}?include=servers`,
-        {
-          headers: {
-            'Authorization': `Bearer ${ADMIN_KEY}`,
-            'Accept': 'application/json',
-          },
-        }
-      );
+      const cacheKey = `user_servers_${req.session.pterodactyl.id}`;
+      let ownedServers = serverCache.get(cacheKey);
 
-      const ownedServers = userResponse.data.attributes.relationships.servers.data;
+      if (!ownedServers) {
+        // Get user's servers directly from Pterodactyl
+        const userResponse = await axios.get(
+          `${PANEL_URL}/api/application/users/${req.session.pterodactyl.id}?include=servers`,
+          {
+            headers: {
+              'Authorization': `Bearer ${ADMIN_KEY}`,
+              'Accept': 'application/json',
+            },
+          }
+        );
+        ownedServers = userResponse.data.attributes.relationships.servers.data;
+        serverCache.set(cacheKey, ownedServers);
+      }
 
       // Check if user owns the server directly
       isOwner = ownedServers.some(s => {
@@ -148,18 +155,25 @@ const ownsServer = async (req, res, next) => {
 
     // FOURTH CHECK: Direct check with Pterodactyl API for subuser permissions
     try {
-      const serverResponse = await axios.get(
-        `${PANEL_URL}/api/application/servers/${normalizedTargetId}?include=users`,
-        {
-          headers: {
-            'Authorization': `Bearer ${ADMIN_KEY}`,
-            'Accept': 'application/json',
-          },
-        }
-      );
+      const cacheKey = `server_subusers_${normalizedTargetId}`;
+      let serverUsers = serverCache.get(cacheKey);
+
+      if (!serverUsers) {
+        const serverResponse = await axios.get(
+          `${PANEL_URL}/api/application/servers/${normalizedTargetId}?include=users`,
+          {
+            headers: {
+              'Authorization': `Bearer ${ADMIN_KEY}`,
+              'Accept': 'application/json',
+            },
+          }
+        );
+        serverUsers = serverResponse.data.attributes.relationships.users.data;
+        serverCache.set(cacheKey, serverUsers);
+      }
 
       // Check if user is a subuser on this server
-      const userIsSubuser = serverResponse.data.attributes.relationships.users.data.some(
+      const userIsSubuser = serverUsers.some(
         user => user.attributes.id === req.session.pterodactyl.id
       );
 
