@@ -18,16 +18,33 @@ const pteroApi = axios.create({
   }
 });
 
-// Check admin status utility function
+// Check admin status utility function with session caching
 async function checkAdminStatus(req, res, settings, db) {
   if (!req.session.pterodactyl) return false;
+
+  const cacheKey = 'adminStatusCache';
+  const cacheExpiry = 5 * 60 * 1000; // 5 minutes
+
+  if (req.session[cacheKey] && req.session[cacheKey].timestamp) {
+    const age = Date.now() - req.session[cacheKey].timestamp;
+    if (age < cacheExpiry) {
+      return req.session[cacheKey].isAdmin;
+    }
+  }
 
   try {
     const userId = await db.get("users-" + req.session.userinfo.id);
     const response = await pteroApi.get(`/api/application/users/${userId}?include=servers`);
-    return response.data.attributes.root_admin === true;
+    const isAdmin = response.data.attributes.root_admin === true;
+
+    req.session[cacheKey] = {
+      isAdmin,
+      timestamp: Date.now()
+    };
+
+    return isAdmin;
   } catch (error) {
-    console.error("Error checking admin status:", error);
+    console.error("Error checking admin status:", error.message);
     return false;
   }
 }

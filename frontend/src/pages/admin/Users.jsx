@@ -294,45 +294,12 @@ export default function UsersPage() {
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Fetch users with resources and coins
+  // Fetch basic user list only (no coins/resources - those are fetched per-page)
   const { data: users, isLoading: loadingUsers } = useQuery({
     queryKey: ['users'],
     queryFn: async () => {
       const { data: usersData } = await axios.get('/api/users');
-
-      const usersWithData = await Promise.all(usersData.data.map(async (user) => {
-        try {
-          const [coinsRes, resourcesRes] = await Promise.all([
-            axios.get(`/api/users/${user.attributes.id}/coins`),
-            axios.get(`/api/users/${user.attributes.id}/resources`)
-          ]);
-
-          return {
-            ...user,
-            coins: coinsRes.data.coins || 0,
-            resources: resourcesRes.data || {
-              ram: 0,
-              disk: 0,
-              cpu: 0,
-              servers: 0
-            }
-          };
-        } catch (error) {
-          console.error(`Error fetching data for user ${user.attributes.username}:`, error);
-          return {
-            ...user,
-            coins: 0,
-            resources: {
-              ram: 0,
-              disk: 0,
-              cpu: 0,
-              servers: 0
-            }
-          };
-        }
-      }));
-
-      return usersWithData;
+      return usersData.data;
     },
     refetchInterval: 30000 // Refresh every 30 seconds
   });
@@ -361,6 +328,75 @@ export default function UsersPage() {
   );
 
   const totalPages = Math.ceil(filteredUsers.length / parseInt(perPage));
+
+  const currentPageUserIds = useMemo(() =>
+    paginatedUsers.map(u => u.attributes.id),
+    [paginatedUsers]
+  );
+
+  const { data: userDetails, isLoading: loadingDetails } = useQuery({
+    queryKey: ['userDetails', currentPageUserIds],
+    queryFn: async () => {
+      if (currentPageUserIds.length === 0) return {};
+
+      const details = {};
+      await Promise.all(currentPageUserIds.map(async (userId) => {
+        try {
+          const [coinsRes, resourcesRes] = await Promise.all([
+            axios.get(`/api/users/${userId}/coins`),
+            axios.get(`/api/users/${userId}/resources`)
+          ]);
+          details[userId] = {
+            coins: coinsRes.data.coins || 0,
+            resources: resourcesRes.data || { ram: 0, disk: 0, cpu: 0, servers: 0 }
+          };
+        } catch (error) {
+          console.error(`Error fetching details for user ${userId}:`, error);
+          details[userId] = {
+            coins: 0,
+            resources: { ram: 0, disk: 0, cpu: 0, servers: 0 }
+          };
+        }
+      }));
+      return details;
+    },
+    enabled: currentPageUserIds.length > 0,
+    staleTime: 30000
+  });
+
+  const usersWithDetails = useMemo(() => {
+    return paginatedUsers.map(user => ({
+      ...user,
+      coins: userDetails?.[user.attributes.id]?.coins ?? null,
+      resources: userDetails?.[user.attributes.id]?.resources ?? null
+    }));
+  }, [paginatedUsers, userDetails]);
+
+  const handleEditClick = async (user) => {
+    setSelectedUser(user);
+    setIsEditModalOpen(true);
+
+    if (user.coins == null || user.resources == null) {
+      try {
+        const [coinsRes, resourcesRes] = await Promise.all([
+          axios.get(`/api/users/${user.attributes.id}/coins`),
+          axios.get(`/api/users/${user.attributes.id}/resources`)
+        ]);
+        setSelectedUser({
+          ...user,
+          coins: coinsRes.data.coins || 0,
+          resources: resourcesRes.data || { ram: 0, disk: 0, cpu: 0, servers: 0 }
+        });
+      } catch (error) {
+        console.error('Error fetching user details:', error);
+        setSelectedUser({
+          ...user,
+          coins: 0,
+          resources: { ram: 0, disk: 0, cpu: 0, servers: 0 }
+        });
+      }
+    }
+  };
 
   const handleCreateUser = async (formData) => {
     if (!formData) {
@@ -530,147 +566,158 @@ export default function UsersPage() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>User</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Purchased Resources</TableHead>
-                <TableHead>Coins</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loadingUsers ? (
-                [...Array(5)].map((_, i) => (
-                  <TableRow key={i}>
-                    <TableCell><Skeleton className="h-6 w-32" /></TableCell>
-                    <TableCell><Skeleton className="h-6 w-48" /></TableCell>
-                    <TableCell><Skeleton className="h-6 w-64" /></TableCell>
-                    <TableCell><Skeleton className="h-6 w-16" /></TableCell>
-                    <TableCell><Skeleton className="h-6 w-24" /></TableCell>
-                    <TableCell><Skeleton className="h-6 w-24" /></TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                paginatedUsers.map(user => (
-                  <TableRow key={user.attributes.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback>
-                            {user.attributes.username.slice(0, 2).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="font-medium flex items-center gap-2">
-                            {user.attributes.username}
-                            {user.attributes.root_admin && (
-                              <HoverCard>
-                                <HoverCardTrigger>
-                                  <Badge variant="default" className="bg-red-500">
-                                    Admin
-                                  </Badge>
-                                </HoverCardTrigger>
-                                <HoverCardContent>
-                                  <div className="flex items-center gap-2">
-                                    <Shield className="w-4 h-4 text-red-500" />
-                                    <span className="text-sm">Administrator account with full access</span>
-                                  </div>
-                                </HoverCardContent>
-                              </HoverCard>
+        <CardContent className="overflow-x-auto">
+          <div className="min-w-[800px]">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>User</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Purchased Resources</TableHead>
+                  <TableHead>Coins</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loadingUsers ? (
+                  [...Array(5)].map((_, i) => (
+                    <TableRow key={i}>
+                      <TableCell><Skeleton className="h-6 w-32" /></TableCell>
+                      <TableCell><Skeleton className="h-6 w-48" /></TableCell>
+                      <TableCell><Skeleton className="h-6 w-64" /></TableCell>
+                      <TableCell><Skeleton className="h-6 w-16" /></TableCell>
+                      <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+                      <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  usersWithDetails.map(user => (
+                    <TableRow key={user.attributes.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-8 w-8">
+                            <AvatarFallback>
+                              {user.attributes.username.slice(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="font-medium flex items-center gap-2">
+                              {user.attributes.username}
+                              {user.attributes.root_admin && (
+                                <HoverCard>
+                                  <HoverCardTrigger>
+                                    <Badge variant="default" className="bg-red-500">
+                                      Admin
+                                    </Badge>
+                                  </HoverCardTrigger>
+                                  <HoverCardContent>
+                                    <div className="flex items-center gap-2">
+                                      <Shield className="w-4 h-4 text-red-500" />
+                                      <span className="text-sm">Administrator account with full access</span>
+                                    </div>
+                                  </HoverCardContent>
+                                </HoverCard>
+                              )}
+                            </div>
+                            <div className="text-sm text-neutral-500">
+                              {user.attributes.first_name} {user.attributes.last_name}
+                            </div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">{user.attributes.email}</div>
+                      </TableCell>
+                      <TableCell>
+                        {user.resources == null ? (
+                          <div className="space-y-2">
+                            <Skeleton className="h-4 w-36" />
+                            <Skeleton className="h-4 w-36" />
+                            <Skeleton className="h-4 w-36" />
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <ResourceInfo
+                              label="Memory"
+                              icon={MemoryStick}
+                              used={user.resources?.ram || 0}
+                              total={user.resources?.ram || 0}
+                              unit="MB"
+                            />
+                            <ResourceInfo
+                              label="Storage"
+                              icon={HardDrive}
+                              used={user.resources?.disk || 0}
+                              total={user.resources?.disk || 0}
+                              unit="MB"
+                            />
+                            <ResourceInfo
+                              label="CPU"
+                              icon={Cpu}
+                              used={user.resources?.cpu || 0}
+                              total={user.resources?.cpu || 0}
+                              unit="%"
+                            />
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div className="text-sm text-neutral-500">
+                            {user.coins == null ? (
+                              <Skeleton className="h-4 w-20" />
+                            ) : (
+                              `${(user.coins || 0).toFixed(2)} coins`
                             )}
                           </div>
-                          <div className="text-sm text-neutral-500">
-                            {user.attributes.first_name} {user.attributes.last_name}
-                          </div>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">{user.attributes.email}</div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-2">
-                        <ResourceInfo
-                          label="Memory"
-                          icon={MemoryStick}
-                          used={user.resources?.ram || 0}
-                          total={user.resources?.ram || 0}
-                          unit="MB"
-                        />
-                        <ResourceInfo
-                          label="Storage"
-                          icon={HardDrive}
-                          used={user.resources?.disk || 0}
-                          total={user.resources?.disk || 0}
-                          unit="MB"
-                        />
-                        <ResourceInfo
-                          label="CPU"
-                          icon={Cpu}
-                          used={user.resources?.cpu || 0}
-                          total={user.resources?.cpu || 0}
-                          unit="%"
-                        />
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="text-sm text-neutral-500">
-                          {user.coins.toFixed(2) || 'Unknown'} coins
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={user.attributes.root_admin ? "destructive" : "success"}>
+                          {user.attributes.root_admin ? "Administrator" : "User"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex justify-end">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreVertical className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuLabel>
+                                User Actions
+                              </DropdownMenuLabel>
+                              <DropdownMenuItem onClick={() => handleEditClick(user)}>
+                                <Edit className="w-4 h-4 mr-2" />
+                                Edit User
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => {
+                                setSelectedUser(user);
+                                setIsDeleteDialogOpen(true);
+                              }}>
+                                <Trash className="w-4 h-4 mr-2 text-red-500" />
+                                Delete User
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={user.attributes.root_admin ? "destructive" : "success"}>
-                        {user.attributes.root_admin ? "Administrator" : "User"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex justify-end">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreVertical className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuLabel>
-                              User Actions
-                            </DropdownMenuLabel>
-                            <DropdownMenuItem onClick={() => {
-                              setSelectedUser(user);
-                              setIsEditModalOpen(true);
-                            }}>
-                              <Edit className="w-4 h-4 mr-2" />
-                              Edit User
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => {
-                              setSelectedUser(user);
-                              setIsDeleteDialogOpen(true);
-                            }}>
-                              <Trash className="w-4 h-4 mr-2 text-red-500" />
-                              Delete User
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
 
           {/* Pagination */}
-          <div className="flex items-center justify-between mt-4">
+          <div className="flex items-center justify-between mt-4 flex-wrap gap-2">
             <div className="text-sm text-neutral-500">
               Showing {((currentPage - 1) * parseInt(perPage)) + 1} to {Math.min(currentPage * parseInt(perPage), filteredUsers.length)} of {filteredUsers.length} users
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-1 flex-wrap">
               <Button
                 variant="outline"
                 size="sm"
@@ -679,16 +726,49 @@ export default function UsersPage() {
               >
                 Previous
               </Button>
-              {[...Array(totalPages)].map((_, i) => (
-                <Button
-                  key={i}
-                  variant={currentPage === i + 1 ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setCurrentPage(i + 1)}
-                >
-                  {i + 1}
-                </Button>
-              ))}
+              {(() => {
+                const pages = [];
+                const maxVisible = 5;
+                let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+                let end = Math.min(totalPages, start + maxVisible - 1);
+
+                if (end - start + 1 < maxVisible) {
+                  start = Math.max(1, end - maxVisible + 1);
+                }
+
+                if (start > 1) {
+                  pages.push(
+                    <Button key={1} variant="outline" size="sm" onClick={() => setCurrentPage(1)}>1</Button>
+                  );
+                  if (start > 2) {
+                    pages.push(<span key="start-ellipsis" className="px-2 text-neutral-500">...</span>);
+                  }
+                }
+
+                for (let i = start; i <= end; i++) {
+                  pages.push(
+                    <Button
+                      key={i}
+                      variant={currentPage === i ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(i)}
+                    >
+                      {i}
+                    </Button>
+                  );
+                }
+
+                if (end < totalPages) {
+                  if (end < totalPages - 1) {
+                    pages.push(<span key="end-ellipsis" className="px-2 text-neutral-500">...</span>);
+                  }
+                  pages.push(
+                    <Button key={totalPages} variant="outline" size="sm" onClick={() => setCurrentPage(totalPages)}>{totalPages}</Button>
+                  );
+                }
+
+                return pages;
+              })()}
               <Button
                 variant="outline"
                 size="sm"
