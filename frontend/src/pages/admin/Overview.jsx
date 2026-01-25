@@ -43,6 +43,7 @@ import {
   Server,
   Database,
   ChevronRight,
+  ArrowRight,
   Box,
   CircuitBoard,
   Rocket
@@ -65,42 +66,56 @@ function WelcomeModal({ isOpen, onClose }) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl bg-[#0a0a0a] border-neutral-800">
-        <div className="py-8">
-          <div className="relative space-y-6">
-            <img src="https://i.imgur.com/ZLb7kak.png" alt="Heliactyl Next Logo" className="w-auto h-12" />
+      <DialogContent className="max-w-2xl bg-[#0a0a0a] border-neutral-800 p-8">
+        <div className="py-4 flex flex-col items-center">
+          <div className="relative space-y-6 flex flex-col items-center text-center w-full">
+            <img src="https://i.imgur.com/7rsHr8H.png" alt="Heliactyl Next Logo" className="w-auto h-24 mb-4" />
             <div className="space-y-2">
               <h2 className="text-3xl font-bold text-white tracking-tight">Heliactyl Next 10.0.0 (Toledo)</h2>
               <p className="text-neutral-400 max-w-lg leading-relaxed">
-                The next generation of Heliactyl Next is here. New year, new look, new features and improvements. 
+                The next generation of Heliactyl Next is here. New year, new look, new features and improvements.
                 We're excited to have you join us now that you've upgraded from Heliactyl!
               </p>
             </div>
-            <div className="flex space-x-3 items-center pt-2">
+          </div>
+
+          <div className="w-full mt-10 space-y-4">
+            <div
+              className="flex items-center space-x-2 group cursor-pointer opacity-60 hover:opacity-100 transition-opacity ml-1"
+              onClick={() => setDontShowAgain(!dontShowAgain)}
+            >
               <Checkbox
                 id="dontShowAgain"
                 checked={dontShowAgain}
-                onCheckedChange={setDontShowAgain}
-                className="border-neutral-700 data-[state=checked]:bg-white data-[state=checked]:border-white data-[state=checked]:text-black"
+                onCheckedChange={(checked) => setDontShowAgain(checked)}
+                className="h-4 w-4 border-neutral-700 rounded-sm transition-all duration-200 group-hover:border-neutral-500 data-[state=checked]:bg-white data-[state=checked]:border-white data-[state=checked]:text-black shrink-0"
+                onClick={(e) => e.stopPropagation()}
               />
               <label
                 htmlFor="dontShowAgain"
-                className="text-sm font-medium text-neutral-500 cursor-pointer select-none hover:text-neutral-300 transition-colors"
+                className="text-[0.7rem] uppercase tracking-widest font-bold text-neutral-400 cursor-pointer select-none whitespace-nowrap"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setDontShowAgain(!dontShowAgain);
+                }}
               >
                 Don't show this again
               </label>
             </div>
+            <Button
+              onClick={handleClose}
+              className="group w-full h-12 text-base font-bold transition-all duration-300 active:scale-[0.98] bg-white text-black hover:bg-neutral-100 flex items-center justify-center gap-2 rounded-xl"
+            >
+              Explore Heliactyl Next
+              <ArrowRight className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1" />
+            </Button>
           </div>
         </div>
-        <DialogFooter className="sm:justify-start pt-2">
-          <Button onClick={handleClose} className="w-full sm:w-80 h-11 text-base font-semibold transition-all active:scale-[0.98] bg-white text-black hover:bg-neutral-200">
-            Explore Heliactyl Next
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
+
 
 // System Stats Component
 function SystemStats() {
@@ -298,7 +313,7 @@ function BackupsDialog({ isOpen, onClose }) {
 
         {selectedBackup && (
           <AlertDialog open={true} onOpenChange={() => setSelectedBackup(null)}>
-            <AlertDialogContent className="bg-[#0a0a0a] border-neutral-800">
+            <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>Restore Configuration</AlertDialogTitle>
                 <AlertDialogDescription>
