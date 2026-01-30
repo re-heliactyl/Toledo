@@ -161,6 +161,19 @@ const ResourceChart = ({ data, dataKey, color, label, unit = "", domain }) => (
   </div>
 );
 
+const formatNetworkSpeed = (kbps) => {
+  if (kbps >= 1099511627776) {
+    return `${(kbps / 1099511627776).toFixed(2)} PB/s`;
+  } else if (kbps >= 1073741824) {
+    return `${(kbps / 1073741824).toFixed(2)} TB/s`;
+  } else if (kbps >= 1048576) {
+    return `${(kbps / 1048576).toFixed(2)} GB/s`;
+  } else if (kbps >= 1024) {
+    return `${(kbps / 1024).toFixed(2)} MB/s`;
+  }
+  return `${kbps.toFixed(2)} KB/s`;
+};
+
 const NetworkChart = ({ data }) => (
   <div className="h-36">
     <ResponsiveContainer width="100%" height="100%">
@@ -175,6 +188,13 @@ const NetworkChart = ({ data }) => (
           tick={{ fontSize: 10, fill: '#6B7280' }}
           stroke="#374151"
           width={40}
+          tickFormatter={(value) => {
+            if (value >= 1099511627776) return `${(value / 1099511627776).toFixed(1)}P`;
+            if (value >= 1073741824) return `${(value / 1073741824).toFixed(1)}T`;
+            if (value >= 1048576) return `${(value / 1048576).toFixed(1)}G`;
+            if (value >= 1024) return `${(value / 1024).toFixed(1)}M`;
+            return `${value.toFixed(0)}K`;
+          }}
         />
         <RechartsTooltip
           content={({ active, payload }) => {
@@ -182,10 +202,10 @@ const NetworkChart = ({ data }) => (
               return (
                 <div className="bg-[#202229] border border-neutral-800 p-2 rounded-lg shadow-lg">
                   <p className="text-sm text-neutral-300">
-                    {`Upload: ${payload[0].value.toFixed(1)} KB/s`}
+                    {`↑ Upload: ${formatNetworkSpeed(payload[0].value)}`}
                   </p>
                   <p className="text-sm text-neutral-300">
-                    {`Download: ${payload[1].value.toFixed(1)} KB/s`}
+                    {`↓ Download: ${formatNetworkSpeed(payload[1].value)}`}
                   </p>
                   <p className="text-xs text-neutral-500">
                     {payload[0].payload.time}
@@ -1055,12 +1075,11 @@ export default function ConsolePage() {
         <ResourceStat
           icon={Network}
           title="Network Traffic"
-          value={`↑${stats.network.up || 0} KB/s`}
-          secondaryValue={`↓${stats.network.down || 0} KB/s`}
+          value={`↑${formatNetworkSpeed(parseFloat(stats.network.up) || 0)}`}
+          secondaryValue={`↓${formatNetworkSpeed(parseFloat(stats.network.down) || 0)}`}
           chartData={resourceHistory.network}
           dataKey="up"
           color={CHART_COLORS.network}
-          unit=" KB/s"
           Chart={NetworkChart}
         />
       </div>
