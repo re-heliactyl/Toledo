@@ -44,7 +44,7 @@ module.exports.load = async function (app, db) {
       );
       return response.data;
     } catch (error) {
-      if (error.response && (error.response.status === 404 || error.response.status === 400)) {
+      if (error.response && (error.response.status === 404 || error.response.status === 400 || error.response.status === 500)) {
         return null;
       }
       throw error;
@@ -76,7 +76,7 @@ module.exports.load = async function (app, db) {
       const serverId = req.params.id;
 
       // Try reading server.properties
-      const propertiesContent = await readFile(serverId, "server.properties");
+      const propertiesContent = await readFile(serverId, "/server.properties");
       if (propertiesContent === null) {
         return res.json({ isMinecraft: false });
       }
@@ -96,7 +96,7 @@ module.exports.load = async function (app, db) {
       }
 
       // Try reading spigot.yml
-      const spigotContent = await readFile(serverId, "spigot.yml");
+      const spigotContent = await readFile(serverId, "/spigot.yml");
       const spigot = {};
       if (spigotContent !== null) {
         // Simple regex extraction for bungeecord
@@ -127,7 +127,7 @@ module.exports.load = async function (app, db) {
 
       // 1. Update server.properties
       if (propertiesUpdates && Object.keys(propertiesUpdates).length > 0) {
-        const propertiesContent = await readFile(serverId, "server.properties");
+        const propertiesContent = await readFile(serverId, "/server.properties");
         if (propertiesContent !== null) {
           const lines = propertiesContent.split(/\r?\n/);
           const modifiedLines = [];
@@ -155,14 +155,14 @@ module.exports.load = async function (app, db) {
             }
           }
 
-          await writeFile(serverId, "server.properties", modifiedLines.join('\n'));
+          await writeFile(serverId, "/server.properties", modifiedLines.join('\n'));
           activityLogged = true;
         }
       }
 
       // 2. Update spigot.yml
       if (spigotUpdates && Object.keys(spigotUpdates).length > 0) {
-        const spigotContent = await readFile(serverId, "spigot.yml");
+        const spigotContent = await readFile(serverId, "/spigot.yml");
         if (spigotContent !== null) {
           let newSpigotContent = spigotContent;
 
@@ -181,7 +181,7 @@ module.exports.load = async function (app, db) {
             }
           }
 
-          await writeFile(serverId, "spigot.yml", newSpigotContent);
+          await writeFile(serverId, "/spigot.yml", newSpigotContent);
           activityLogged = true;
         }
       }
