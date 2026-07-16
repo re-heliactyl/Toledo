@@ -1,4 +1,5 @@
 const createAuthz = require('../handlers/authz');
+const { triggerAchievement } = require('./achievements');
 
 const HeliactylModule = {
   "name": "Referrals",
@@ -72,6 +73,13 @@ module.exports.load = async function (app, db) {
     });
 
     res.json({ success: "Referral code created" });
+
+    // Trigger achievement
+    try {
+      await triggerAchievement(db, sessionUser.id, 'generate_referral');
+    } catch (achError) {
+      console.error('Failed to trigger generate_referral achievement:', achError);
+    }
   });
 
   app.post('/claim', async (req, res) => {
@@ -185,6 +193,13 @@ module.exports.load = async function (app, db) {
 
       console.log(`Referral claimed: user=${sessionUser.id} code=${referralCode}`);
       res.json({ success: "Referral code claimed" });
+
+      // Trigger achievement
+      try {
+        await triggerAchievement(db, sessionUser.id, 'claim_referral');
+      } catch (achError) {
+        console.error('Failed to trigger claim_referral achievement:', achError);
+      }
     } catch (error) {
       if (error?.code === 'P2002') {
         console.warn(`Referral claim P2002 conflict: user=${sessionUser.id} code=${referralCode}`);

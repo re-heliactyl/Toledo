@@ -86,6 +86,7 @@ model User {
   passkeys        Passkey[]
   subdomains      ServerSubdomain[]
   antiVpnAllowlists AntiVpnAllowlistUser[]
+  achievements    UserAchievement[]
 }
 
 model AntiVpnAllowlist {
@@ -424,5 +425,32 @@ model ServerSubdomain {
 
   @@unique([name, domain])
   @@index([serverId])
+  @@index([userId])
+}
+
+// ──────────────────────────────────────────────
+// Achievements & Quests System
+// ──────────────────────────────────────────────
+
+model Achievement {
+  id          String            @id @default(cuid())
+  key         String            @unique // e.g. "create_server", "daily_claim", "stake_coins", "claim_referral", "generate_referral"
+  name        String
+  description String
+  rewardCoins Int               @default(0)
+  createdAt   DateTime          @default(now())
+  users       UserAchievement[]
+}
+
+model UserAchievement {
+  id            String   @id @default(cuid())
+  userId        String
+  achievementId String
+  unlockedAt    DateTime @default(now())
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
   @@index([userId])
 }

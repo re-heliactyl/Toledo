@@ -13,7 +13,7 @@
     "chokidar": "^3.6.0",
     "compression": "^1.7.5",
     "connect-pg-simple": "^10.0.0",
-    "connect-sqlite3": "^0.9.16",
+    "connect-sqlite3": "0.9.16",
     "cookie-parser": "^1.4.7",
     "discord.js": "^14.26.4",
     "dotenv": "^16.4.5",

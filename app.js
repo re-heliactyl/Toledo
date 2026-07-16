@@ -54,7 +54,24 @@ if (isPostgres) {
   sessionStore = new PgStore({ conString: dbUrl, tableName: "session", createTableIfMissing: true });
 } else {
   const SQLiteStore = require("connect-sqlite3")(session);
-  sessionStore = new SQLiteStore({ db: "sessions.db", dir: "./" });
+  let sessionDb = "sessions.db";
+  if (typeof settings.database === "string") {
+    sessionDb = settings.database;
+  } else if (settings.database && typeof settings.database.url === "string") {
+    sessionDb = settings.database.url.replace(/^file:/, "");
+  }
+
+  try {
+    const sqlite3 = require("sqlite3");
+    const dbInstance = new sqlite3.Database("./" + sessionDb);
+    sessionStore = new SQLiteStore({ db: dbInstance });
+  } catch (err) {
+    if (err instanceof TypeError && err.message.includes("indexOf")) {
+      sessionStore = new SQLiteStore({ db: sessionDb, dir: "./" });
+    } else {
+      throw err;
+    }
+  }
 }
 
 app.use(session({

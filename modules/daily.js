@@ -3,6 +3,7 @@ const loadConfig = require("../handlers/config.js");
 const settings = loadConfig("./config.toml");
 const { validate, schemas } = require('../handlers/validate');
 const createAuthz = require('../handlers/authz');
+const { triggerAchievement } = require('./achievements');
 
 const HeliactylModule = {
   "name": "Daily Rewards",
@@ -599,6 +600,13 @@ module.exports.load = function (app, db) {
         success: true,
         ...result
       });
+
+      // Trigger achievement
+      try {
+        await triggerAchievement(db, userId, 'daily_claim');
+      } catch (achError) {
+        console.error('Failed to trigger daily_claim achievement:', achError);
+      }
     } catch (error) {
       if (error.name === 'DailyRewardsError') {
         return res.status(400).json({ error: error.message, code: error.code });

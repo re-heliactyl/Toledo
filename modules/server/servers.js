@@ -12,6 +12,7 @@ const { ownsServer, isServerOwner, checkIsServerOwner, invalidateOwnershipCache 
 const { initializeServerRenewal, removeServerRenewal } = require('./renewals.js');
 const { removeServerSubdomains } = require('./subdomains.js');
 const { applySftpIpMode, getSftpIpMode } = require('../../handlers/sftp');
+const { triggerAchievement } = require('../achievements');
 
 // Dynamic eggs helper - will be initialized in load()
 let getEggsFromDB = null;
@@ -628,6 +629,13 @@ module.exports.load = async function (app, db) {
                 `User ${sessionUser.username} created server "${name}" ` +
                 `(RAM: ${ram}MB, CPU: ${cpu}%, Disk: ${disk}MB)`
             );
+
+            // Trigger achievement
+            try {
+                await triggerAchievement(db, sessionUser.id, 'create_server');
+            } catch (achError) {
+                console.error('Failed to trigger achievement:', achError);
+            }
 
             // Update user servers cache with the new server details to prevent reload race conditions
             try {

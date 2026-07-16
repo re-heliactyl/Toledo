@@ -3,6 +3,7 @@ const loadConfig = require("../handlers/config.js");
 const settings = loadConfig("./config.toml");
 const { validate, schemas } = require('../handlers/validate');
 const createAuthz = require('../handlers/authz');
+const { triggerAchievement } = require('./achievements');
 
 const HeliactylModule = {
   "name": "Staking",
@@ -385,6 +386,13 @@ module.exports.load = function (app, db) {
         stake: result.stake,
         balance: result.balance
       });
+
+      // Trigger achievement
+      try {
+        await triggerAchievement(db, userId, 'stake_coins');
+      } catch (achError) {
+        console.error('Failed to trigger stake_coins achievement:', achError);
+      }
     } catch (error) {
       if (error instanceof StakingError) {
         return res.status(400).json({ error: error.message, code: error.code });
