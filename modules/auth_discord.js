@@ -2,7 +2,7 @@ const vpnCheck = require("../handlers/vpnCheck.js");
 const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 const axios = require('axios');
-const { Client, GatewayIntentBits, Partials } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const loadConfig = require("../handlers/config.js");
 const settings = loadConfig("./config.toml");
 const log = require("../handlers/log.js");
@@ -187,8 +187,48 @@ client.login(DISCORD_BOT_TOKEN).catch((error) => {
   process.exit(1);
 });
 
+/**
+ * Send a Discord DM to a ticket owner when an admin replies to their ticket
+ * @param {string} discordUserId - The Discord user ID to message
+ * @param {string} ticketDisplayId - Short display ID (e.g., "ABC12345")
+ * @param {string} ticketSubject - The ticket subject
+ * @param {string} websiteDomain - The website domain for the ticket link
+ */
+async function sendTicketReplyDM(discordUserId, ticketDisplayId, ticketSubject, websiteDomain) {
+  try {
+    const user = await client.users.fetch(discordUserId);
+
+    const embed = new EmbedBuilder()
+      .setColor(0x5865F2)
+      .setTitle('📬 Ticket Reply Received')
+      .setDescription('An administrator has responded to your support ticket.')
+      .addFields(
+        { name: 'Ticket', value: `#${ticketDisplayId}`, inline: true },
+        { name: 'Subject', value: ticketSubject.length > 50 ? ticketSubject.slice(0, 50) + '...' : ticketSubject, inline: true },
+        { name: 'Status', value: 'Open', inline: true }
+      )
+      .setTimestamp()
+      .setFooter({ text: 'Overnode Support' });
+
+    const button = new ButtonBuilder()
+      .setLabel('View Ticket')
+      .setStyle(ButtonStyle.Link)
+      .setURL(`${websiteDomain}/support`);
+
+    const row = new ActionRowBuilder().addComponents(button);
+
+    await user.send({ embeds: [embed], components: [row] });
+  } catch (error) {
+    if (error.code === 50007) {
+      return;
+    }
+    console.error('Failed to send ticket reply DM:', error.message);
+  }
+}
+
 // Module export
 module.exports.HeliactylModule = HeliactylModule;
+module.exports.sendTicketReplyDM = sendTicketReplyDM;
 module.exports.load = async function (app, db) {
   const authz = createAuthz(db);
   const ipCheck = createIpCheck(db);

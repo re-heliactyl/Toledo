@@ -7,8 +7,10 @@ WORKDIR /app
 
 COPY server/package.json server/pnpm-lock.yaml* server/package-lock.json* server/pnpm-workspace.yaml* ./
 COPY server/prisma/ ./prisma/
+COPY server/prisma/ ./prisma_backup/
 COPY server/scripts/ ./scripts/
 
+ENV PUPPETEER_SKIP_DOWNLOAD=true
 RUN npm install -g pnpm && pnpm install --frozen-lockfile || npm install
 
 # Copy only backend source files (avoids copying host node_modules and sessions.db)

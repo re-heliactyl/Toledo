@@ -50,9 +50,9 @@ function safeJsonParse(value, fallback) {
   }
 }
 
-async function checkAdminStatus(req, res, db) {
+async function checkAdminStatus(req, res, db, requiredPerm = 'admin.nodes.view') {
   const authz = createAuthz(db);
-  return authz.getAdminStatus(req);
+  return authz.hasPermission(req, requiredPerm);
 }
 
 async function getLocationsFromDB(db) {

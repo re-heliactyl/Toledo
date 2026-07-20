@@ -27,6 +27,7 @@
     "nocache": "^4.0.0",
     "node-cache": "^5.1.2",
     "pg": "^8.13.0",
+    "puppeteer": "^25.3.0",
     "qrcode": "^1.5.4",
     "speakeasy": "^2.0.0",
     "sqlite3": "^5.1.7",

@@ -575,14 +575,28 @@ module.exports.load = async function (app, db) {
 
             // Validate against egg maximums
             if (eggInfo.maximum) {
-                if (eggInfo.maximum.ram && ram > eggInfo.maximum.ram) {
-                    return res.status(400).json({ error: `Maximum RAM allowed is ${eggInfo.maximum.ram}MB` });
+                let maxRam = eggInfo.maximum.ram;
+                let maxDisk = eggInfo.maximum.disk;
+                let maxCpu = eggInfo.maximum.cpu;
+
+                try {
+                    const hasPack = await db.userPack.findFirst({
+                        where: { userId: sessionUser.id, type: { in: ['upgraded_pack', 'god_pack'] }, status: 'active', expiresAt: { gt: new Date() } }
+                    });
+                    if (hasPack) {
+                        if (maxRam) maxRam = Math.round(maxRam * 1.5);
+                        if (maxDisk) maxDisk = Math.round(maxDisk * 1.5);
+                    }
+                } catch {}
+
+                if (maxRam && ram > maxRam) {
+                    return res.status(400).json({ error: `Maximum RAM allowed is ${maxRam}MB` });
                 }
-                if (eggInfo.maximum.disk && disk > eggInfo.maximum.disk) {
-                    return res.status(400).json({ error: `Maximum disk allowed is ${eggInfo.maximum.disk}MB` });
+                if (maxDisk && disk > maxDisk) {
+                    return res.status(400).json({ error: `Maximum disk allowed is ${maxDisk}MB` });
                 }
-                if (eggInfo.maximum.cpu && cpu > eggInfo.maximum.cpu) {
-                    return res.status(400).json({ error: `Maximum CPU allowed is ${eggInfo.maximum.cpu}%` });
+                if (maxCpu && cpu > maxCpu) {
+                    return res.status(400).json({ error: `Maximum CPU allowed is ${maxCpu}%` });
                 }
             }
 
@@ -798,14 +812,28 @@ module.exports.load = async function (app, db) {
 
             // Validate against egg maximums
             if (eggInfo?.maximum) {
-                if (eggInfo.maximum.ram && ram > eggInfo.maximum.ram) {
-                    return res.status(400).json({ error: `Maximum RAM allowed is ${eggInfo.maximum.ram}MB` });
+                let maxRam = eggInfo.maximum.ram;
+                let maxDisk = eggInfo.maximum.disk;
+                let maxCpu = eggInfo.maximum.cpu;
+
+                try {
+                    const hasPack = await db.userPack.findFirst({
+                        where: { userId: sessionUser.id, type: { in: ['upgraded_pack', 'god_pack'] }, status: 'active', expiresAt: { gt: new Date() } }
+                    });
+                    if (hasPack) {
+                        if (maxRam) maxRam = Math.round(maxRam * 1.5);
+                        if (maxDisk) maxDisk = Math.round(maxDisk * 1.5);
+                    }
+                } catch {}
+
+                if (maxRam && ram > maxRam) {
+                    return res.status(400).json({ error: `Maximum RAM allowed is ${maxRam}MB` });
                 }
-                if (eggInfo.maximum.disk && disk > eggInfo.maximum.disk) {
-                    return res.status(400).json({ error: `Maximum disk allowed is ${eggInfo.maximum.disk}MB` });
+                if (maxDisk && disk > maxDisk) {
+                    return res.status(400).json({ error: `Maximum disk allowed is ${maxDisk}MB` });
                 }
-                if (eggInfo.maximum.cpu && cpu > eggInfo.maximum.cpu) {
-                    return res.status(400).json({ error: `Maximum CPU allowed is ${eggInfo.maximum.cpu}%` });
+                if (maxCpu && cpu > maxCpu) {
+                    return res.status(400).json({ error: `Maximum CPU allowed is ${maxCpu}%` });
                 }
             }
 

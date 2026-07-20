@@ -87,6 +87,8 @@ model User {
   subdomains      ServerSubdomain[]
   antiVpnAllowlists AntiVpnAllowlistUser[]
   achievements    UserAchievement[]
+  packs           UserPack[]
+  roles           UserRole[]
 }
 
 model AntiVpnAllowlist {
@@ -411,6 +413,24 @@ model InstalledPlugin {
   @@index([serverId])
 }
 
+model UserPack {
+  id                    String    @id @default(cuid())
+  userId                String
+  type                  String    // auto_renew, upgraded_pack, god_pack
+  status                String    @default("active") // active, expired, cancelled
+  stripeSubscriptionId  String?   @unique
+  stripeCustomerId      String?
+  startedAt             DateTime  @default(now())
+  expiresAt             DateTime
+  createdAt             DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+  @@index([status, expiresAt])
+  @@index([userId])
+}
+
 model ServerSubdomain {
   id        String   @id @default(cuid())
   serverId  String
@@ -454,3 +474,36 @@ model UserAchievement {
   @@unique([userId, achievementId])
   @@index([userId])
 }
+
+// ──────────────────────────────────────────────
+// Custom Roles & Permissions System (RBAC)
+// ──────────────────────────────────────────────
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  color       String   @default("#6366f1")
+  priority    Int      @default(0)
+  isSystem    Boolean  @default(false)
+  permissions String   @default("[]") // JSON array of string keys
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users UserRole[]
+}
+
+model UserRole {
+  id         String   @id @default(cuid())
+  userId     String
+  roleId     String
+  assignedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@index([userId])
+  @@index([roleId])
+}
+

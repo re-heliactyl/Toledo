@@ -60,17 +60,12 @@ if (isPostgres) {
   } else if (settings.database && typeof settings.database.url === "string") {
     sessionDb = settings.database.url.replace(/^file:/, "");
   }
-
   try {
     const sqlite3 = require("sqlite3");
     const dbInstance = new sqlite3.Database("./" + sessionDb);
     sessionStore = new SQLiteStore({ db: dbInstance });
   } catch (err) {
-    if (err instanceof TypeError && err.message.includes("indexOf")) {
-      sessionStore = new SQLiteStore({ db: sessionDb, dir: "./" });
-    } else {
-      throw err;
-    }
+    sessionStore = new SQLiteStore({ db: sessionDb, dir: "./" });
   }
 }
 
@@ -106,7 +101,7 @@ const moduleExports = { app, db, VERSION, PLATFORM_CODENAME, API_LEVEL };
 module.exports = moduleExports;
 global.__rootdir = __dirname;
 
-if (require.main === module) {
+if (require.main === module || require.main?.filename === __filename || !module.parent) {
   (async () => {
     try {
       const moduleLoader = new ModuleLoader(app, db, VERSION, API_LEVEL);

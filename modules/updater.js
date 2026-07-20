@@ -24,9 +24,9 @@ const pteroApi = axios.create({
 });
 
 // Check admin status utility function
-async function checkAdminStatus(req, res, db) {
+async function checkAdminStatus(req, res, db, requiredPerm = 'admin.updater.manage') {
   const authz = createAuthz(db);
-  return authz.getAdminStatus(req);
+  return authz.hasPermission(req, requiredPerm);
 }
 
 

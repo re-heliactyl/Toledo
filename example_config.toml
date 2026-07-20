@@ -93,6 +93,17 @@ cpu = 100
 servers = 2
 
 # ---------------------------------
+# Bundle Configuration (Auto Renew, Upgraded Pack, God Pack)
+# ---------------------------------
+[api.client.bundles]
+auto_renew_price = 4.99
+upgraded_pack_price = 9.99
+god_pack_price = 19.99
+god_pack_role_id = "000000000000000000"
+subscription_days = 30
+mantle_bundle_card = true
+
+# ---------------------------------
 # Egg Configuration
 # ---------------------------------
 
@@ -159,6 +170,22 @@ webhook = "https://discord.com/api/webhooks/your_webhook_url"
 "user banned" = true
 "user unbanned" = true
 "sftp config updated" = true
+
+# ---------------------------------
+# Billing & Invoice Configuration
+# ---------------------------------
+[billing]
+vat_rate = 20.0 # TVA rate in percentage (default: 20% France)
+
+  [billing.seller]
+  business_name = "Your Business Name"
+  phone = "+33 X XX XX XX XX"
+  address = "Your Address"
+  country = "France"
+  postal_code = "XXXXX"
+  city = "Your City"
+  vat_number = "FRXX XXXXXXXXXX"
+  siret_number = "XXX XXX XXX XXXXX"
 
 # ---------------------------------
 # Renewal Configuration

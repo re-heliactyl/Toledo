@@ -68,6 +68,8 @@ model User {
   passkeys        Passkey[]
   subdomains      ServerSubdomain[]
   antiVpnAllowlists AntiVpnAllowlistUser[]
+  packs           UserPack[]
+  roles           UserRole[]
 }
 
 model AntiVpnAllowlist {
@@ -388,6 +390,24 @@ model InstalledPlugin {
   @@index([serverId])
 }
 
+model UserPack {
+  id                    String    @id @default(cuid())
+  userId                String
+  type                  String    // auto_renew, upgraded_pack, god_pack
+  status                String    @default("active") // active, expired, cancelled
+  stripeSubscriptionId  String?   @unique
+  stripeCustomerId      String?
+  startedAt             DateTime  @default(now())
+  expiresAt             DateTime
+  createdAt             DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+  @@index([status, expiresAt])
+  @@index([userId])
+}
+
 model ServerSubdomain {
   id        String   @id @default(cuid())
   serverId  String
@@ -404,3 +424,36 @@ model ServerSubdomain {
   @@index([serverId])
   @@index([userId])
 }
+
+// ──────────────────────────────────────────────
+// Custom Roles & Permissions System (RBAC)
+// ──────────────────────────────────────────────
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique @db.VarChar(191)
+  description String?  @db.Text
+  color       String   @default("#6366f1") @db.VarChar(50)
+  priority    Int      @default(0)
+  isSystem    Boolean  @default(false)
+  permissions String   @default("[]") @db.LongText // JSON array of string keys
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users UserRole[]
+}
+
+model UserRole {
+  id         String   @id @default(cuid())
+  userId     String
+  roleId     String
+  assignedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@index([userId])
+  @@index([roleId])
+}
+

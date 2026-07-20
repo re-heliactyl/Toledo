@@ -95,6 +95,7 @@ module.exports.load = async function (app, db) {
       });
       const twoFactorEnabled = user?.twoFactorEnabled || false;
       const banned = user?.isBanned === true;
+      const userPerms = await authz.getUserPermissions(req);
 
       // Return authentication state
       return res.json({
@@ -104,6 +105,8 @@ module.exports.load = async function (app, db) {
         banned,
         ban: banned ? authz.buildBanPayload(user) : null,
         admin: await authz.getAdminStatus(req),
+        permissions: userPerms.permissions,
+        roles: userPerms.roles,
         site_name: settings.website.name || "Heliactyl",
         user: {
           id: userData.id,
@@ -328,6 +331,8 @@ module.exports.load = async function (app, db) {
         });
       }
 
+      const userPerms = await authz.getUserPermissions(req);
+
       res.json({
         state: {
           authenticated: !twoFactorPending,
@@ -344,6 +349,8 @@ module.exports.load = async function (app, db) {
         },
         coins,
         admin: isAdmin,
+        permissions: userPerms.permissions,
+        roles: userPerms.roles,
         settings: getPublicSettings(),
         servers,
         subuserServers

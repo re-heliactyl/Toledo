@@ -497,6 +497,56 @@ async function handleExpiredRecord(db, record, config) {
     return;
   }
 
+  // ── Auto-renew check ──────────────────────────────────
+  // If the user has an active auto_renew subscription, extend the server
+  // instead of stopping it.
+  if (record.userId) {
+    try {
+      const hasAutoRenew = await db.userPack.findFirst({
+        where: {
+          userId: record.userId,
+          type: { in: ['auto_renew', 'god_pack'] },
+          status: 'active',
+          expiresAt: { gt: new Date() }
+        }
+      });
+
+      if (hasAutoRenew) {
+        // Automatically extend renewal
+        const renewalDates = buildRenewalDates(config, new Date());
+        const updatedRecord = await writeRenewalRecord(db, record.serverIdentifier, {
+          ...record,
+          lastRenewedAt: renewalDates.lastRenewedAt,
+          nextRenewalAt: renewalDates.nextRenewalAt,
+          expiredAt: null,
+          isActive: true,
+          renewalCount: (record.renewalCount || 0) + 1,
+          lastAutoRenewedAt: new Date().toISOString()
+        });
+
+        // Restart server if it was off
+        if (record.isActive === false) {
+          try {
+            await startServer(record.serverIdentifier);
+          } catch (err) {
+            console.error(`[Renewal] Failed to restart auto-renewed server ${record.serverIdentifier}:`, err.message);
+          }
+        }
+
+        if (record.userId) {
+          await cache.del(`ptero:user:${record.userId}:servers`);
+        }
+
+        console.log(`[Renewal] Auto-renewed server ${record.serverIdentifier} for user ${record.userId}`);
+        return;
+      }
+    } catch (err) {
+      console.error(`[Renewal] Error checking auto-renew for ${record.serverIdentifier}:`, err.message);
+      // Fall through to normal expiration logic
+    }
+  }
+  // ── End auto-renew check ──────────────────────────────
+
   try {
     await stopServer(record.serverIdentifier);
   } catch (error) {

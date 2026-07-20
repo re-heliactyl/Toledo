@@ -38,9 +38,9 @@ const HeliactylModule = {
 module.exports.HeliactylModule = HeliactylModule;
 
 // Check admin status utility function
-async function checkAdminStatus(req, res, db) {
+async function checkAdminStatus(req, res, db, requiredPerm = 'admin.eggs.view') {
   const authz = createAuthz(db);
-  return authz.getAdminStatus(req);
+  return authz.hasPermission(req, requiredPerm);
 }
 
 /**

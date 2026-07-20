@@ -6,6 +6,7 @@ const log = require('../handlers/log');
 const { validate, schemas } = require('../handlers/validate');
 const createAuthz = require('../handlers/authz');
 const { financialRateLimit } = require('../handlers/rateLimit');
+const InvoiceGenerator = require('./invoice');
 
 const HeliactylModule = {
   "name": "Billing",
@@ -209,11 +210,16 @@ class BillingManager {
           userId,
           type: 'purchase',
           amount: Math.round(bundle.price_usd * 100), // Storing USD cents
-          description: `Bundle Purchase: ${bundle.name}`,
+          description: `Bundle ${bundle.name}`,
           details: JSON.stringify({
             bundle: bundleId,
             name: bundle.name,
-            resources: bundle.resources
+            price_usd: bundle.price_usd,
+            resources: bundle.resources,
+            payment_method: 'Internal Credit',
+            item_type: 'bundle',
+            quantity: 1,
+            unit_price: bundle.price_usd
           })
         }
       });
@@ -226,9 +232,6 @@ class BillingManager {
     const session = await getStripe().checkout.sessions.create({
       customer_email: userEmail,
       payment_method_types: ['card', 'link', 'paypal'],
-      invoice_creation: {
-        enabled: true,
-      },
       line_items: [
         {
           price_data: {
@@ -330,25 +333,55 @@ module.exports.load = async function (app, db) {
 
       const amountUsd = parseFloat(session.metadata.amount_usd);
 
-      // Fetch Invoice or Receipt URL
-      let invoiceUrl = null;
-      let invoicePdf = null;
+      // --- Capture payment method & customer details from Stripe ---
+      let paymentMethodLabel = 'Card';
+      let firstName = '';
+      let lastName = '';
 
       try {
-        if (session.invoice) {
-          const invoice = await getStripe().invoices.retrieve(session.invoice);
-          invoiceUrl = invoice.hosted_invoice_url;
-          invoicePdf = invoice.invoice_pdf;
-        } else if (session.payment_intent) {
-          const paymentIntent = await getStripe().paymentIntents.retrieve(session.payment_intent);
-          if (paymentIntent.latest_charge) {
-            const charge = await getStripe().charges.retrieve(paymentIntent.latest_charge);
-            invoiceUrl = charge.receipt_url;
+        // Get customer details from session
+        const customerDetails = session.customer_details;
+        if (customerDetails?.name) {
+          const nameParts = customerDetails.name.trim().split(/\s+/);
+          firstName = nameParts[0] || '';
+          lastName = nameParts.slice(1).join(' ') || '';
+        }
+
+        // Get payment method from the payment intent
+        if (session.payment_intent) {
+          const paymentIntent = await getStripe().paymentIntents.retrieve(
+            session.payment_intent,
+            { expand: ['payment_method'] }
+          );
+
+          const pm = paymentIntent.payment_method;
+          if (pm?.type === 'card') {
+            const wallet = pm.card?.wallet?.type;
+            if (wallet === 'apple_pay') {
+              paymentMethodLabel = 'Apple Pay';
+            } else {
+              const brand = pm.card?.brand || 'carte';
+              paymentMethodLabel = `Card ${brand.charAt(0).toUpperCase() + brand.slice(1)}`;
+            }
+          } else if (pm?.type) {
+            paymentMethodLabel = pm.type;
           }
         }
       } catch (err) {
-        console.error('Failed to retrieve invoice details:', err);
+        console.error('Failed to retrieve payment details from Stripe:', err);
       }
+
+      // Enrich transaction details
+      const transactionDetails = {
+        checkout_session: session_id,
+        amount_usd: amountUsd,
+        first_name: firstName,
+        last_name: lastName,
+        payment_method: paymentMethodLabel,
+        item_type: 'credit',
+        quantity: 1,
+        unit_price: amountUsd
+      };
 
       // Add credit and log transaction atomically
       await db.$transaction(async (tx) => {
@@ -368,13 +401,8 @@ module.exports.load = async function (app, db) {
             userId: req.session.userinfo.id,
             type: 'purchase',
             amount: Math.round(amountUsd * 100),
-            description: 'Credit Purchase via Stripe',
-            details: JSON.stringify({
-              checkout_session: session_id,
-              amount_usd: amountUsd,
-              invoice_url: invoiceUrl,
-              invoice_pdf: invoicePdf
-            }),
+            description: `Credit Top-up ($${amountUsd})`,
+            details: JSON.stringify(transactionDetails),
             externalId: session_id
           }
         });
@@ -382,7 +410,7 @@ module.exports.load = async function (app, db) {
 
       // Log the successful payment
       log('payment_success',
-        `User ${req.session.userinfo.id} added $${amountUsd} credit balance via Stripe Checkout`
+        `User ${req.session.userinfo.id} added $${amountUsd} credit balance via Stripe Checkout (${paymentMethodLabel})`
       );
 
       res.json({
@@ -392,7 +420,7 @@ module.exports.load = async function (app, db) {
           amount_usd: amountUsd,
           date: new Date().toISOString(),
           status: 'completed',
-          method: 'Stripe'
+          method: paymentMethodLabel
         }
       });
     } catch (error) {
@@ -448,10 +476,14 @@ module.exports.load = async function (app, db) {
             userId,
             type: 'purchase',
             amount: pkg.amount,
-            description: `Coin Purchase: ${pkg.amount} Coins`,
+            description: `Purchase of ${pkg.amount} Coins`,
             details: JSON.stringify({
               package_amount: pkg.amount,
-              price_usd: pkg.price_usd
+              price_usd: pkg.price_usd,
+              payment_method: 'Internal Credit',
+              item_type: 'coins',
+              quantity: pkg.amount,
+              unit_price: pkg.price_usd / pkg.amount
             })
           }
         });
@@ -602,7 +634,7 @@ module.exports.load = async function (app, db) {
     }
   });
 
-  // Get invoices (filtered transactions with invoice URLs)
+  // Get invoices (all 'purchase' type transactions)
   router.get('/billing/invoices', async (req, res) => {
     try {
       const userId = req.session.userinfo.id;
@@ -610,19 +642,80 @@ module.exports.load = async function (app, db) {
 
       const invoices = transactions
         .map(t => ({ ...t, details: JSON.parse(t.details || '{}') }))
-        .filter(t => t.type === 'purchase' && t.details && (t.details.invoice_url || t.details.invoice_pdf))
-        .map(t => ({
-          id: t.id,
-          date: t.createdAt.toISOString(),
-          amount: t.amount / 100, // Cents to USD
-          url: t.details?.invoice_url,
-          pdf: t.details?.invoice_pdf
-        }));
+        .filter(t => t.type === 'purchase')
+        .filter(t => {
+          // Include credit top-ups (have amount_usd), coin purchases (have package_amount), or bundle purchases
+          const d = t.details;
+          return d?.amount_usd || d?.package_amount || d?.bundle;
+        })
+        .map(t => {
+          const d = t.details || {};
+          let amount = 0;
+          if (d.amount_usd) {
+            amount = d.amount_usd;
+          } else if (d.price_usd) {
+            amount = d.price_usd;
+          } else {
+            amount = Math.abs(t.amount) / 100;
+          }
+
+          return {
+            id: t.id,
+            date: t.createdAt.toISOString(),
+            amount,
+            description: t.description
+          };
+        });
 
       res.json({ invoices });
     } catch (error) {
       console.error('Error fetching invoices:', error);
       res.status(500).json({ error: 'Failed to fetch invoices' });
+    }
+  });
+
+  // Download invoice as PDF
+  router.get('/billing/invoices/:transactionId/download', async (req, res) => {
+    try {
+      const userId = req.session.userinfo.id;
+      const { transactionId } = req.params;
+
+      // Fetch transaction and verify ownership
+      const transaction = await db.transaction.findUnique({
+        where: { id: transactionId }
+      });
+
+      if (!transaction) {
+        return res.status(404).json({ error: 'Transaction not found' });
+      }
+
+      if (transaction.userId !== userId) {
+        return res.status(403).json({ error: 'Unauthorized' });
+      }
+
+      // Fetch user
+      const user = await db.user.findUnique({
+        where: { id: userId }
+      });
+
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      // Generate invoice PDF
+      const invoiceGen = new InvoiceGenerator();
+      const raw = await invoiceGen.generateInvoice(transaction, user);
+      const pdfBuffer = Buffer.from(raw);
+
+      // Set response headers for PDF download
+      const invoiceId = transaction.id.substring(0, 13).toUpperCase();
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="facture-${invoiceId}.pdf"`);
+      res.setHeader('Content-Length', pdfBuffer.length);
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error('Error generating invoice:', error);
+      res.status(500).json({ error: 'Failed to generate invoice' });
     }
   });
 

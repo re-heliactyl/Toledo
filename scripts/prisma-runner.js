@@ -2,6 +2,23 @@
 
 const { spawnSync } = require("child_process");
 const path = require("path");
+const fs = require("fs");
+
+const backupDir = path.join(__dirname, "..", "prisma_backup");
+const prismaDir = path.join(__dirname, "..", "prisma");
+
+if (fs.existsSync(backupDir)) {
+  try {
+    const files = fs.readdirSync(backupDir);
+    for (const file of files) {
+      if (file.endsWith(".prisma")) {
+        fs.copyFileSync(path.join(backupDir, file), path.join(prismaDir, file));
+      }
+    }
+  } catch (err) {
+    console.error("[PRISMA] Failed to restore schemas from backup:", err.message);
+  }
+}
 
 require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
 

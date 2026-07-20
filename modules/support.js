@@ -6,6 +6,7 @@ const { paginate, getPaginationParams } = require("../handlers/pagination");
 const { validate, schemas } = require("../handlers/validate");
 const createAuthz = require('../handlers/authz');
 const log = require('../handlers/log');
+const { sendTicketReplyDM } = require('./auth_discord.js');
 
 // Pterodactyl API helper
 const pteroApi = axios.create({
@@ -457,6 +458,23 @@ module.exports.load = async function (app, db) {
         });
       }
 
+      // Send Discord DM to ticket owner if admin replied
+      if (isAdmin) {
+        try {
+          const ticketOwner = await db.user.findUnique({
+            where: { id: ticket.userId },
+            select: { discordId: true }
+          });
+
+          if (ticketOwner?.discordId) {
+            const ticketDisplayId = ticket.id.slice(0, 8).toUpperCase();
+            sendTicketReplyDM(ticketOwner.discordId, ticketDisplayId, ticket.subject, settings.website.domain);
+          }
+        } catch (dmError) {
+          console.error('Failed to send Discord DM notification:', dmError.message);
+        }
+      }
+
       // Webhook log for ticket reply
       const sender = isAdmin ? 'Staff' : (sessionUser.username || sessionUser.email);
       log('ticket_reply', `**${sender}** replied to ticket **#${ticket.id.slice(0, 8).toUpperCase()}**\n**Subject:** ${ticket.subject}\n**Message:** ${content.length > 200 ? content.slice(0, 200) + '...' : content}`);
@@ -598,6 +616,50 @@ module.exports.load = async function (app, db) {
       res.json(formatTicketForDisplay(updatedTicket));
     } catch (error) {
       console.error("Error updating ticket priority:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Archive a ticket
+  app.post("/api/tickets/:id/archive", async (req, res) => {
+    if (!await checkAdmin(req, res, settings, db)) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
+
+    const sessionUser = authz.getSessionUser(req);
+
+    try {
+      const ticket = await db.ticket.findUnique({
+        where: { id: req.params.id }
+      });
+
+      if (!ticket) {
+        return res.status(404).json({ error: "Ticket not found" });
+      }
+
+      await db.ticket.update({
+        where: { id: ticket.id },
+        data: { status: 'archived' }
+      });
+
+      // Add system message about archiving
+      await db.ticketMessage.create({
+        data: {
+          ticketId: ticket.id,
+          userId: sessionUser.id,
+          content: 'Ticket archived by staff',
+          isSystem: true
+        }
+      });
+
+      const updatedTicket = await db.ticket.findUnique({
+        where: { id: ticket.id },
+        include: { messages: true }
+      });
+
+      res.json(formatTicketForDisplay(updatedTicket));
+    } catch (error) {
+      console.error("Error archiving ticket:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });

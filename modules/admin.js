@@ -106,7 +106,12 @@ module.exports.HeliactylModule = HeliactylModule;
 module.exports.load = async function (app, db) {
   let configNeedsReboot = false;
   const authz = createAuthz(db);
-  const checkAdmin = (req) => authz.getAdminStatus(req);
+  const checkAdmin = (req, requiredPerm) => {
+    if (!requiredPerm) {
+      console.warn('[RBAC Warning] checkAdmin called without requiredPerm key');
+    }
+    return authz.hasPermission(req, requiredPerm || 'admin.access');
+  };
   const banUserSelect = {
     id: true,
     username: true,
@@ -172,13 +177,19 @@ module.exports.load = async function (app, db) {
 
   // New /api/admin endpoint
   app.get("/api/admin", async (req, res) => {
-    const isAdmin = await authz.getAdminStatus(req);
-    res.json({ admin: isAdmin });
+    const userPerms = await authz.getUserPermissions(req);
+    const hasAdmin = await checkAdmin(req);
+    res.json({
+      admin: hasAdmin,
+      isRootAdmin: userPerms.isRootAdmin,
+      permissions: userPerms.permissions,
+      roles: userPerms.roles
+    });
   });
 
   // Update dashboard name
   app.patch("/api/config/name", validate(schemas.configName), async (req, res) => {
-    if (!await checkAdmin(req)) {
+    if (!await checkAdmin(req, 'admin.settings.manage')) {
       return res.status(403).json({ error: "Unauthorized" });
     }
 
@@ -219,7 +230,7 @@ module.exports.load = async function (app, db) {
 
   // Update dashboard logo
   app.patch("/api/config/logo", validate(schemas.configLogo), async (req, res) => {
-    if (!await checkAdmin(req)) {
+    if (!await checkAdmin(req, 'admin.settings.manage')) {
       return res.status(403).json({ error: "Unauthorized" });
     }
 
@@ -260,7 +271,7 @@ module.exports.load = async function (app, db) {
 
   // Rebuild panel
   app.post("/api/panel/rebuild", async (req, res) => {
-    if (!await checkAdmin(req)) {
+    if (!await checkAdmin(req, 'admin.settings.manage')) {
       return res.status(403).json({ error: "Unauthorized" });
     }
 
@@ -302,7 +313,7 @@ module.exports.load = async function (app, db) {
 
   // Get config backups
   app.get("/api/config/backups", async (req, res) => {
-    if (!await checkAdmin(req)) {
+    if (!await checkAdmin(req, 'admin.settings.manage')) {
       return res.status(403).json({ error: "Unauthorized" });
     }
 
@@ -328,7 +339,7 @@ module.exports.load = async function (app, db) {
   });
 
   app.get("/api/config", async (req, res) => {
-    if (!await checkAdmin(req)) {
+    if (!await checkAdmin(req, 'admin.settings.manage')) {
       return res.status(403).json({ error: "Unauthorized" });
     }
 
@@ -342,7 +353,7 @@ module.exports.load = async function (app, db) {
   });
 
   app.get("/api/settings/sftp", async (req, res) => {
-    if (!await checkAdmin(req)) {
+    if (!await checkAdmin(req, 'admin.settings.manage')) {
       return res.status(403).json({ error: "Unauthorized" });
     }
 
@@ -356,7 +367,7 @@ module.exports.load = async function (app, db) {
   });
 
   app.patch("/api/settings/sftp", adminWriteRateLimit, validate(schemas.configSftpMode), async (req, res) => {
-    if (!await checkAdmin(req)) {
+    if (!await checkAdmin(req, 'admin.settings.manage')) {
       return res.status(403).json({ error: "Unauthorized" });
     }
 
@@ -1465,7 +1476,7 @@ module.exports.load = async function (app, db) {
   });
 
   app.post("/api/users/:id/ban", adminWriteRateLimit, validate(schemas.adminBanUser), async (req, res) => {
-    if (!await authz.getAdminStatus(req)) {
+    if (!await authz.hasPermission(req, 'admin.users.ban')) {
       return res.status(403).json({ error: "Unauthorized" });
     }
 
@@ -1522,7 +1533,7 @@ module.exports.load = async function (app, db) {
   });
 
   app.delete("/api/users/:id/ban", adminWriteRateLimit, async (req, res) => {
-    if (!await authz.getAdminStatus(req)) {
+    if (!await authz.hasPermission(req, 'admin.users.ban')) {
       return res.status(403).json({ error: "Unauthorized" });
     }
 
@@ -1624,7 +1635,7 @@ module.exports.load = async function (app, db) {
   });
 
   app.get("/api/users/:id/addcoins/:coins", adminWriteRateLimit, async (req, res) => {
-    if (!await authz.getAdminStatus(req)) {
+    if (!await authz.hasPermission(req, 'admin.users.manage')) {
       return res.status(403).json({ error: "Unauthorized" });
     }
 
@@ -1657,7 +1668,7 @@ module.exports.load = async function (app, db) {
 
   // Update user coins
   app.patch("/api/users/:id/coins", adminWriteRateLimit, validate(schemas.adminSetCoins), async (req, res) => {
-    if (!await authz.getAdminStatus(req)) {
+    if (!await authz.hasPermission(req, 'admin.users.manage')) {
       return res.status(403).json({ error: "Unauthorized" });
     }
 
@@ -1691,7 +1702,7 @@ module.exports.load = async function (app, db) {
 
   // Update user resources
   app.patch("/api/users/:id/resources", adminWriteRateLimit, validate(schemas.adminSetResources), async (req, res) => {
-    if (!await authz.getAdminStatus(req)) {
+    if (!await authz.hasPermission(req, 'admin.users.manage')) {
       return res.status(403).json({ error: "Unauthorized" });
     }
 

@@ -187,12 +187,95 @@ function createAuthz(db) {
     }
   }
 
-  async function requireAdmin(req, res, next) {
-    if (!await getAdminStatus(req)) {
-      return res.status(403).json({ error: 'Unauthorized' });
+  async function getUserPermissions(req) {
+    if (!hasUserSession(req)) {
+      return { isRootAdmin: false, permissions: [], roles: [] };
     }
 
-    next();
+    const isRootAdmin = await getAdminStatus(req);
+    const sessionUser = getSessionUser(req);
+
+    const userWithRoles = await db.user.findUnique({
+      where: { id: sessionUser.id },
+      include: {
+        roles: {
+          include: {
+            role: true,
+          },
+        },
+      },
+    });
+
+    const userRoles = (userWithRoles?.roles || []).map((ur) => ur.role);
+
+    if (isRootAdmin) {
+      return {
+        isRootAdmin: true,
+        permissions: ['*'],
+        roles: userRoles.length > 0 ? userRoles : [
+          {
+            id: 'superadmin',
+            name: 'Super Admin',
+            description: 'Pterodactyl Root Admin',
+            color: '#ef4444',
+            priority: 999,
+            isSystem: true,
+            permissions: JSON.stringify(['*']),
+          },
+        ],
+      };
+    }
+
+    const permSet = new Set();
+    for (const r of userRoles) {
+      if (!r.permissions) continue;
+      try {
+        const list = typeof r.permissions === 'string' ? JSON.parse(r.permissions) : r.permissions;
+        if (Array.isArray(list)) {
+          list.forEach((p) => permSet.add(p));
+        }
+      } catch (err) {
+        console.error('Error parsing role permissions:', err);
+      }
+    }
+
+    return {
+      isRootAdmin: false,
+      permissions: Array.from(permSet),
+      roles: userRoles,
+    };
+  }
+
+  async function hasPermission(req, requiredPerm) {
+    const { isRootAdmin, permissions } = await getUserPermissions(req);
+    if (isRootAdmin || permissions.includes('*')) {
+      return true;
+    }
+    return permissions.includes(requiredPerm);
+  }
+
+  function requirePermission(requiredPerm) {
+    return async function (req, res, next) {
+      if (!hasUserSession(req)) {
+        return res.status(401).json({ error: 'Not authenticated' });
+      }
+
+      const permitted = await hasPermission(req, requiredPerm);
+      if (!permitted) {
+        return res.status(403).json({ error: `Access denied: missing permission ${requiredPerm}` });
+      }
+
+      next();
+    };
+  }
+
+  async function requireAdmin(req, res, next) {
+    const { isRootAdmin, permissions } = await getUserPermissions(req);
+    if (isRootAdmin || permissions.includes('*') || permissions.includes('admin.access') || permissions.some(p => p.startsWith('admin.'))) {
+      return next();
+    }
+
+    return res.status(403).json({ error: 'Unauthorized' });
   }
 
   function clearAdminCache(req) {
@@ -215,9 +298,13 @@ function createAuthz(db) {
     requireSession,
     requirePterodactylSession,
     getAdminStatus,
+    getUserPermissions,
+    hasPermission,
+    requirePermission,
     requireAdmin,
     clearAdminCache,
   };
 }
 
 module.exports = createAuthz;
+

@@ -554,6 +554,13 @@ const schemas = {
     })
   }),
 
+  // Subscription bundle purchase (Auto Renew / Upgraded Pack / God Pack)
+  bundlePurchaseSub: z.object({
+    type: z.enum(['auto_renew', 'upgraded_pack', 'god_pack'], {
+      errorMap: () => ({ message: 'Bundle type must be: auto_renew, upgraded_pack, or god_pack' })
+    })
+  }),
+
   // Coin package purchase
   purchaseCoins: z.object({
     package_id: z.number({ invalid_type_error: 'Package ID must be a number' })
