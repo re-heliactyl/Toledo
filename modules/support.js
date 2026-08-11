@@ -8,6 +8,29 @@ const createAuthz = require('../handlers/authz');
 const log = require('../handlers/log');
 const { sendTicketReplyDM } = require('./auth_discord.js');
 
+/**
+ * Send a ticket notification to the dedicated ticket webhook if configured,
+ * otherwise fall back to the main logging webhook.
+ * @param {string} action 
+ * @param {string} message 
+ */
+function logTicket(action, message) {
+  const ticketWebhook = settings.logging?.ticket_webhook;
+  if (ticketWebhook && ticketWebhook.trim() !== '') {
+    axios.post(ticketWebhook, {
+      embeds: [{
+        color: 0x5865F2,
+        title: `Ticket: \`${action}\``,
+        description: message,
+        author: { name: 'Heliactyl Support Tickets' },
+        thumbnail: { url: settings.website?.logo || '' }
+      }]
+    }).catch(() => {});
+  } else {
+    log(action, message);
+  }
+}
+
 // Pterodactyl API helper
 const pteroApi = axios.create({
   baseURL: settings.pterodactyl.domain,
@@ -276,7 +299,7 @@ module.exports.load = async function (app, db) {
       });
 
       // Webhook log for ticket creation
-      log('ticket_created', `**${sessionUser.username || sessionUser.email}** created ticket **#${ticket.id.slice(0, 8).toUpperCase()}**\n**Subject:** ${subject}\n**Priority:** ${priority}\n**Category:** ${category}`);
+      logTicket('ticket_created', `**${sessionUser.username || sessionUser.email}** created ticket **#${ticket.id.slice(0, 8).toUpperCase()}**\n**Subject:** ${subject}\n**Priority:** ${priority}\n**Category:** ${category}`);
 
       res.status(201).json(ticket);
     } catch (error) {
@@ -477,7 +500,7 @@ module.exports.load = async function (app, db) {
 
       // Webhook log for ticket reply
       const sender = isAdmin ? 'Staff' : (sessionUser.username || sessionUser.email);
-      log('ticket_reply', `**${sender}** replied to ticket **#${ticket.id.slice(0, 8).toUpperCase()}**\n**Subject:** ${ticket.subject}\n**Message:** ${content.length > 200 ? content.slice(0, 200) + '...' : content}`);
+      logTicket('ticket_reply', `**${sender}** replied to ticket **#${ticket.id.slice(0, 8).toUpperCase()}**\n**Subject:** ${ticket.subject}\n**Message:** ${content.length > 200 ? content.slice(0, 200) + '...' : content}`);
 
       res.json({
         ...message,

@@ -140,6 +140,7 @@ enabled = true
 [logging]
 status = true
 webhook = "https://discord.com/api/webhooks/your_webhook_url"
+ticket_webhook = "" # Optional: separate webhook for ticket notifications. Leave empty to use main webhook.
 
 [logging.actions.user]
 "Resources Purchased" = true
