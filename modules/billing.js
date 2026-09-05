@@ -42,17 +42,17 @@ function getStripe() {
 }
 
 const COIN_PURCHASE_OPTIONS = [
-  { amount: 1000, price_usd: 1.79 },
-  { amount: 2500, price_usd: 3.99 },
-  { amount: 5000, price_usd: 5.99 },
-  { amount: 10000, price_usd: 9.99 },
-  { amount: 25000, price_usd: 19.99 }
+  { amount: 1000, price_eur: 1.79 },
+  { amount: 2500, price_eur: 3.99 },
+  { amount: 5000, price_eur: 5.99 },
+  { amount: 10000, price_eur: 9.99 },
+  { amount: 25000, price_eur: 19.99 }
 ];
 
 const BUNDLES = {
   starter: {
     name: "Explorer",
-    price_usd: 7.99,
+    price_eur: 7.99,
     resources: {
       ram: 16384, // 16 GB
       disk: 102400, // 100 GB
@@ -63,7 +63,7 @@ const BUNDLES = {
   },
   network: {
     name: "Network",
-    price_usd: 37.99,
+    price_eur: 37.99,
     resources: {
       ram: 65536, // 64 GB
       disk: 409600, // 400 GB
@@ -74,7 +74,7 @@ const BUNDLES = {
   },
   enterprise: {
     name: "Unlimited",
-    price_usd: 99.99,
+    price_eur: 99.99,
     resources: {
       ram: 163840, // 160 GB
       disk: 1024000, // 1000 GB
@@ -150,7 +150,7 @@ class BillingManager {
   }
 
   async logTransaction(userId, type, details, amount, externalId = null) {
-    // Schema uses Int for amount. Convert USD to cents if applicable, else use as is.
+    // Schema uses Int for amount. Convert EUR to cents if applicable, else use as is.
     const amountVal = (type === 'credit_purchase' || type === 'credit_spend')
       ? Math.round(amount * 100)
       : Math.round(amount);
@@ -209,17 +209,18 @@ class BillingManager {
         data: {
           userId,
           type: 'purchase',
-          amount: Math.round(bundle.price_usd * 100), // Storing USD cents
+          amount: Math.round(bundle.price_eur * 100),
           description: `Bundle ${bundle.name}`,
           details: JSON.stringify({
             bundle: bundleId,
             name: bundle.name,
-            price_usd: bundle.price_usd,
+            price_eur: bundle.price_eur,
             resources: bundle.resources,
+            currency: 'EUR',
             payment_method: 'Internal Credit',
             item_type: 'bundle',
             quantity: 1,
-            unit_price: bundle.price_usd
+            unit_price: bundle.price_eur
           })
         }
       });
@@ -228,19 +229,20 @@ class BillingManager {
     return true;
   }
 
-  async createCheckoutSession(userId, amount_usd, userEmail) {
+  async createCheckoutSession(userId, amount_eur, userEmail) {
+    const amountVal = parseFloat(amount_eur);
     const session = await getStripe().checkout.sessions.create({
       customer_email: userEmail,
       payment_method_types: ['card', 'link', 'paypal'],
       line_items: [
         {
           price_data: {
-            currency: 'usd',
+            currency: 'eur',
             product_data: {
               name: 'Credit Balance',
-              description: `Add $${amount_usd} credit to your account`,
+              description: `Add ${amountVal.toFixed(2)} € credit to your account`,
             },
-            unit_amount: Math.round(amount_usd * 100),
+            unit_amount: Math.round(amountVal * 100),
           },
           quantity: 1,
         },
@@ -251,7 +253,8 @@ class BillingManager {
       metadata: {
         userId: userId,
         type: 'credit_purchase',
-        amount_usd: amount_usd
+        amount_eur: amountVal,
+        currency: 'EUR'
       },
     });
 
@@ -277,9 +280,10 @@ module.exports.load = async function (app, db) {
 
       res.json({
         balances: {
-          credit_usd: creditBalance,
+          credit_eur: creditBalance,
           coins: coinBalance
         },
+        currency: 'EUR',
         coin_packages: COIN_PURCHASE_OPTIONS,
         bundles: BUNDLES
       });
@@ -292,11 +296,11 @@ module.exports.load = async function (app, db) {
   // Create checkout session for adding credit
   router.post('/billing/checkout', validate(schemas.billingCheckout), async (req, res) => {
     try {
-      const { amount_usd } = req.body;
+      const { amount_eur } = req.body;
 
       const session = await billingManager.createCheckoutSession(
         req.session.userinfo.id,
-        amount_usd,
+        amount_eur,
         req.session.userinfo.email
       );
 
@@ -331,7 +335,7 @@ module.exports.load = async function (app, db) {
         return res.status(403).json({ error: 'Unauthorized payment session' });
       }
 
-      const amountUsd = parseFloat(session.metadata.amount_usd);
+      const amountEur = parseFloat(session.metadata.amount_eur);
 
       // --- Capture payment method & customer details from Stripe ---
       let paymentMethodLabel = 'Card';
@@ -374,13 +378,14 @@ module.exports.load = async function (app, db) {
       // Enrich transaction details
       const transactionDetails = {
         checkout_session: session_id,
-        amount_usd: amountUsd,
+        amount_eur: amountEur,
+        currency: 'EUR',
         first_name: firstName,
         last_name: lastName,
         payment_method: paymentMethodLabel,
         item_type: 'credit',
         quantity: 1,
-        unit_price: amountUsd
+        unit_price: amountEur
       };
 
       // Add credit and log transaction atomically
@@ -393,15 +398,15 @@ module.exports.load = async function (app, db) {
 
         await tx.user.update({
           where: { id: req.session.userinfo.id },
-          data: { creditUsd: { increment: amountUsd } }
+          data: { creditUsd: { increment: amountEur } }
         });
 
         await tx.transaction.create({
           data: {
             userId: req.session.userinfo.id,
             type: 'purchase',
-            amount: Math.round(amountUsd * 100),
-            description: `Credit Top-up ($${amountUsd})`,
+            amount: Math.round(amountEur * 100),
+            description: `Credit Top-up (${amountEur.toFixed(2)} €)`,
             details: JSON.stringify(transactionDetails),
             externalId: session_id
           }
@@ -410,14 +415,15 @@ module.exports.load = async function (app, db) {
 
       // Log the successful payment
       log('payment_success',
-        `User ${req.session.userinfo.id} added $${amountUsd} credit balance via Stripe Checkout (${paymentMethodLabel})`
+        `User ${req.session.userinfo.id} added ${amountEur.toFixed(2)} € credit balance via Stripe Checkout (${paymentMethodLabel})`
       );
 
       res.json({
         success: true,
         transaction: {
           id: session_id,
-          amount_usd: amountUsd,
+          amount_eur: amountEur,
+          currency: 'EUR',
           date: new Date().toISOString(),
           status: 'completed',
           method: paymentMethodLabel
@@ -443,8 +449,9 @@ module.exports.load = async function (app, db) {
         return res.status(400).json({ error: 'Invalid package selected' });
       }
 
+      const price = pkg.price_eur;
       const creditBalance = await billingManager.getCreditBalance(userId);
-      if (creditBalance < pkg.price_usd) {
+      if (creditBalance < price) {
         return res.status(402).json({ error: 'Insufficient credit balance' });
       }
 
@@ -454,7 +461,7 @@ module.exports.load = async function (app, db) {
         await tx.user.update({
           where: { id: userId },
           data: {
-            creditUsd: { decrement: pkg.price_usd },
+            creditUsd: { decrement: price },
             coins: { increment: pkg.amount }
           }
         });
@@ -464,9 +471,13 @@ module.exports.load = async function (app, db) {
           data: {
             userId,
             type: 'spend',
-            amount: Math.round(pkg.price_usd * 100),
+            amount: Math.round(price * 100),
             description: `Bought ${pkg.amount} Coins`,
-            details: JSON.stringify({ description: `Bought ${pkg.amount} Coins` })
+            details: JSON.stringify({
+              description: `Bought ${pkg.amount} Coins`,
+              price_eur: price,
+              currency: 'EUR'
+            })
           }
         });
 
@@ -479,11 +490,12 @@ module.exports.load = async function (app, db) {
             description: `Purchase of ${pkg.amount} Coins`,
             details: JSON.stringify({
               package_amount: pkg.amount,
-              price_usd: pkg.price_usd,
+              price_eur: price,
+              currency: 'EUR',
               payment_method: 'Internal Credit',
               item_type: 'coins',
               quantity: pkg.amount,
-              unit_price: pkg.price_usd / pkg.amount
+              unit_price: price / pkg.amount
             })
           }
         });
@@ -585,12 +597,12 @@ module.exports.load = async function (app, db) {
       if (!bundle) return res.status(400).json({ error: 'Invalid bundle' });
 
       const creditBalance = await billingManager.getCreditBalance(userId);
-      if (creditBalance < bundle.price_usd) {
+      if (creditBalance < bundle.price_eur) {
         return res.status(402).json({ error: 'Insufficient credit balance' });
       }
 
       // Deduct credit and apply bundle
-      await billingManager.addCreditBalance(userId, -bundle.price_usd);
+      await billingManager.addCreditBalance(userId, -bundle.price_eur);
       await billingManager.applyBundle(userId, bundle_id);
 
       const user = await db.user.findUnique({
@@ -644,17 +656,17 @@ module.exports.load = async function (app, db) {
         .map(t => ({ ...t, details: JSON.parse(t.details || '{}') }))
         .filter(t => t.type === 'purchase')
         .filter(t => {
-          // Include credit top-ups (have amount_usd), coin purchases (have package_amount), or bundle purchases
+          // Include credit top-ups (have amount_eur), coin purchases (have package_amount), or bundle purchases
           const d = t.details;
-          return d?.amount_usd || d?.package_amount || d?.bundle;
+          return d?.amount_eur || d?.package_amount || d?.bundle;
         })
         .map(t => {
           const d = t.details || {};
           let amount = 0;
-          if (d.amount_usd) {
-            amount = d.amount_usd;
-          } else if (d.price_usd) {
-            amount = d.price_usd;
+          if (d.amount_eur !== undefined) {
+            amount = d.amount_eur;
+          } else if (d.price_eur !== undefined) {
+            amount = d.price_eur;
           } else {
             amount = Math.abs(t.amount) / 100;
           }
@@ -663,6 +675,7 @@ module.exports.load = async function (app, db) {
             id: t.id,
             date: t.createdAt.toISOString(),
             amount,
+            currency: d.currency || 'EUR',
             description: t.description
           };
         });

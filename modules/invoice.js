@@ -66,16 +66,16 @@ class InvoiceGenerator {
     let itemType = 'credit';
 
     if (details.package_amount) {
-      // Coin purchase — details.price_usd is the total paid (incl. VAT)
+      // Coin purchase — details.price_eur is the total paid (incl. VAT)
       quantity = details.package_amount;
-      paidAmount = details.price_usd;
+      paidAmount = details.price_eur !== undefined ? details.price_eur : 0;
       description = `Purchase of ${details.package_amount} Coins`;
       itemType = 'coins';
-    } else if (details.amount_usd) {
-      // Credit top-up — details.amount_usd is the total paid (incl. VAT)
+    } else if (details.amount_eur !== undefined) {
+      // Credit top-up — details.amount_eur is the total paid (incl. VAT)
       quantity = 1;
-      paidAmount = details.amount_usd;
-      description = `Credit Top-up ($${details.amount_usd})`;
+      paidAmount = details.amount_eur;
+      description = `Credit Top-up (${paidAmount} €)`;
       itemType = 'credit';
     } else if (details.resource) {
       // Store purchase with coins — no real money, no VAT
@@ -84,9 +84,9 @@ class InvoiceGenerator {
       description = `Resource Purchase: ${details.resource} x${quantity}`;
       itemType = 'resource';
     } else if (details.bundle) {
-      // Bundle purchase — price_usd is the total paid (incl. VAT)
+      // Bundle purchase — price_eur is the total paid (incl. VAT)
       quantity = 1;
-      paidAmount = details.price_usd || (Math.abs(transaction.amount) / 100);
+      paidAmount = details.price_eur !== undefined ? details.price_eur : (Math.abs(transaction.amount) / 100);
       description = `Bundle ${details.name || details.bundle}`;
       itemType = 'bundle';
     } else {
@@ -378,8 +378,8 @@ class InvoiceGenerator {
       <tr>
         <td style="font-weight:500">${description}</td>
         <td>${quantity}</td>
-        <td>${fmt(unitPrice)} USD</td>
-        <td>${fmt(subtotal)} USD</td>
+        <td>${fmt(unitPrice)} EUR</td>
+        <td>${fmt(subtotal)} EUR</td>
       </tr>
     </tbody>
   </table>
@@ -389,15 +389,15 @@ class InvoiceGenerator {
     <div class="totals-inner">
       <div class="total-row sub">
         <span>Subtotal</span>
-        <span>${fmt(subtotal)} USD</span>
+        <span>${fmt(subtotal)} EUR</span>
       </div>
       <div class="total-row">
         <span>VAT (${vatRate}%)</span>
-        <span>${fmt(vatAmount)} USD</span>
+        <span>${fmt(vatAmount)} EUR</span>
       </div>
       <div class="total-row grand">
         <span>Total (incl. VAT)</span>
-        <span>${fmt(total)} USD</span>
+        <span>${fmt(total)} EUR</span>
       </div>
     </div>
   </div>

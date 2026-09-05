@@ -37,9 +37,9 @@ function getStripe() {
 function getBundleConfig() {
   const b = settings?.api?.client?.bundles || {};
   return {
-    autoRenewPrice: parseFloat(b.auto_renew_price) || 4.99,
-    upgradedPackPrice: parseFloat(b.upgraded_pack_price) || 9.99,
-    godPackPrice: parseFloat(b.god_pack_price) || 19.99,
+    autoRenewPrice: parseFloat(b.auto_renew_price) || 2.99,
+    upgradedPackPrice: parseFloat(b.upgraded_pack_price) || 3.99,
+    godPackPrice: parseFloat(b.god_pack_price) || 5.49,
     godPackRoleId: String(b.god_pack_role_id || "000000000000000000"),
     subscriptionDays: parseInt(b.subscription_days, 10) || 30,
     mantleBundleCard: b.mantle_bundle_card !== false
@@ -72,19 +72,35 @@ class BundleManager {
       const existing = await getStripe().products.list({ active: true, limit: 100 });
       for (const [key, info] of Object.entries(BUNDLE_PRODUCTS)) {
         const match = existing.data.find(p => p.name === info.name);
+        const pk = key === 'auto_renew' ? 'autoRenewPrice' : key === 'upgraded_pack' ? 'upgradedPackPrice' : 'godPackPrice';
+        const targetAmount = Math.round(cfg[pk] * 100);
         let pid;
-        if (match) { const pr = await getStripe().prices.list({ product: match.id, active: true, limit: 10 }); pid = pr.data[0]?.id; }
-        if (!pid) {
+        let prodId;
+        if (match) {
+          prodId = match.id;
+          const pr = await getStripe().prices.list({ product: match.id, active: true, limit: 20 });
+          const matchingPrice = pr.data.find(p => p.currency === 'eur' && p.unit_amount === targetAmount && p.recurring?.interval === 'month');
+          if (matchingPrice) {
+            pid = matchingPrice.id;
+          }
+        } else {
           const prod = await getStripe().products.create({ name: info.name, description: info.description });
-          const pk = key === 'auto_renew' ? 'autoRenewPrice' : key === 'upgraded_pack' ? 'upgradedPackPrice' : 'godPackPrice';
-          const pr = await getStripe().prices.create({ product: prod.id, unit_amount: Math.round(cfg[pk] * 100), currency: 'usd', recurring: { interval: 'month' } });
+          prodId = prod.id;
+        }
+        if (!pid) {
+          const pr = await getStripe().prices.create({
+            product: prodId,
+            unit_amount: targetAmount,
+            currency: 'eur',
+            recurring: { interval: 'month' }
+          });
           pid = pr.id;
         }
         pm[key] = pid;
       }
       this.stripePrices = pm;
       this.productsInitialized = true;
-      console.log('[BUNDLES] Stripe products ready');
+      console.log('[BUNDLES] Stripe products ready (EUR)');
     } catch (e) { console.error('[BUNDLES] Stripe setup error:', e.message); }
   }
 
@@ -137,7 +153,8 @@ class BundleManager {
           details: JSON.stringify({
             bundle_type: type,
             bundle: type,
-            price_usd: price,
+            price_eur: price,
+            currency: 'EUR',
             payment_method: subId ? 'Stripe Subscription' : 'Wallet Credit',
             item_type: 'subscription',
             quantity: 1,
@@ -149,7 +166,7 @@ class BundleManager {
     });
 
     if (type === 'god_pack') { try { await this.assignDiscordRole(uid); } catch {} }
-    log('payment_success', `User ${uid} activated ${type} via Stripe`);
+    log('payment_success', `User ${uid} activated ${type} via Stripe (€${price})`);
     return { type, expiresAt: exp.toISOString() };
   }
 
@@ -175,20 +192,21 @@ class BundleManager {
     const params = {
       mode: 'subscription', customer_email: email,
       line_items: [{ price: priceId, quantity: 1 }],
-      metadata: { userId: uid, bundleType: type, usedWalletCredit: hasCredit ? 'true' : 'false' },
+      metadata: { userId: uid, bundleType: type, usedWalletCredit: hasCredit ? 'true' : 'false', currency: 'EUR' },
       success_url: `${settings.website.domain}/billing/subscription-success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${settings.website.domain}/coins/store`
     };
 
     if (hasCredit) {
-      params.subscription_data = { trial_period_days: SUBSCRIPTION_DAYS, metadata: { userId: uid, bundleType: type, walletCreditUsed: 'true' } };
+      params.subscription_data = { trial_period_days: SUBSCRIPTION_DAYS, metadata: { userId: uid, bundleType: type, walletCreditUsed: 'true', currency: 'EUR' } };
       await this.db.user.update({ where: { id: uid }, data: { creditUsd: { decrement: price } } });
       await this.db.transaction.create({
         data: {
           userId: uid, type: 'purchase', amount: Math.round(price * 100),
           description: `Bundle: ${type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}`,
           details: JSON.stringify({
-            bundle_type: type, bundle: type, price_usd: price,
+            bundle_type: type, bundle: type, price_eur: price,
+            currency: 'EUR',
             payment_method: 'Wallet Credit (Stripe Trial)',
             item_type: 'subscription', quantity: 1, unit_price: price,
             subscription_days: SUBSCRIPTION_DAYS
@@ -196,7 +214,7 @@ class BundleManager {
         }
       });
     } else {
-      params.subscription_data = { metadata: { userId: uid, bundleType: type, walletCreditUsed: 'false' } };
+      params.subscription_data = { metadata: { userId: uid, bundleType: type, walletCreditUsed: 'false', currency: 'EUR' } };
     }
 
     const session = await getStripe().checkout.sessions.create(params);
@@ -219,7 +237,7 @@ class BundleManager {
 
         // Find the user pack linked to this subscription
         const pack = await this.db.userPack.findFirst({
-          where: { stripeSubscriptionId: subId, status: 'active' }
+          where: { stripeSubscriptionId: subId }
         });
         if (!pack) break;
 
@@ -227,13 +245,32 @@ class BundleManager {
         const prices = this.getPrices();
         const price = prices[pack.type] || 0;
 
-        // Extend expiration
+        // Calculate next expiration date from invoice period or config days
+        const periodEnd = invoice.lines?.data?.[0]?.period?.end
+          ? new Date(invoice.lines.data[0].period.end * 1000)
+          : new Date(Date.now() + c.subscriptionDays * DAY_MS);
+
+        // Extend expiration and keep status active
         await this.db.userPack.updateMany({
-          where: { stripeSubscriptionId: subId, status: 'active' },
-          data: { expiresAt: new Date(Date.now() + c.subscriptionDays * DAY_MS) }
+          where: { stripeSubscriptionId: subId },
+          data: { status: 'active', expiresAt: periodEnd }
         });
 
-        // Create wallet transaction for the renewal
+        // For god_pack, also extend subsidiary entries (auto_renew, upgraded_pack)
+        if (pack.type === 'god_pack') {
+          await this.db.userPack.updateMany({
+            where: {
+              userId: pack.userId,
+              type: { in: ['auto_renew', 'upgraded_pack'] },
+              stripeSubscriptionId: null
+            },
+            data: { status: 'active', expiresAt: periodEnd }
+          });
+          // Ensure Discord role is preserved
+          try { await this.assignDiscordRole(pack.userId); } catch {}
+        }
+
+        // Create wallet transaction for the renewal in EUR
         const chargedAmount = invoice.amount_paid ? invoice.amount_paid / 100 : price;
         await this.db.transaction.create({
           data: {
@@ -244,7 +281,8 @@ class BundleManager {
             details: JSON.stringify({
               bundle_type: pack.type,
               bundle: pack.type,
-              price_usd: chargedAmount,
+              price_eur: chargedAmount,
+              currency: 'EUR',
               payment_method: 'Stripe Subscription',
               item_type: 'subscription_renewal',
               quantity: 1,
@@ -255,18 +293,58 @@ class BundleManager {
           }
         });
 
-        console.log(`[BUNDLES] Renewal invoice ${invoice.id} for ${pack.userId}: $${chargedAmount}`);
+        console.log(`[BUNDLES] Renewal payment succeeded: invoice ${invoice.id} for user ${pack.userId}: €${chargedAmount} - extended to ${periodEnd.toISOString()}`);
         break;
       }
-      case 'customer.subscription.deleted':
+      case 'invoice.payment_failed': {
+        const invoice = event.data.object;
+        const subId = invoice.subscription;
+        if (!subId) break;
+
+        const pack = await this.db.userPack.findFirst({
+          where: { stripeSubscriptionId: subId }
+        });
+        if (pack) {
+          await this.cancelSubscriptionPacks(subId, pack.userId, pack.type === 'god_pack', pack.type === 'upgraded_pack' || pack.type === 'god_pack');
+          console.log(`[BUNDLES] Renewal invoice ${invoice.id} payment failed: cancelled subscription ${subId} and revoked all perks for user ${pack.userId}`);
+        }
+        break;
+      }
+      case 'customer.subscription.deleted': {
+        const s = event.data.object;
+        const pack = await this.db.userPack.findFirst({
+          where: { stripeSubscriptionId: s.id }
+        });
+        if (pack) {
+          await this.cancelSubscriptionPacks(s.id, pack.userId, pack.type === 'god_pack', pack.type === 'upgraded_pack' || pack.type === 'god_pack');
+          console.log(`[BUNDLES] Subscription ${s.id} deleted: cancelled all perks for user ${pack.userId}`);
+        }
+        break;
+      }
       case 'customer.subscription.updated': {
         const s = event.data.object;
-        if (['canceled', 'incomplete_expired', 'unpaid'].includes(s.status)) {
-          const pack = await this.db.userPack.findFirst({
-            where: { stripeSubscriptionId: s.id, status: 'active' }
-          });
-          if (pack) {
-            await this.cancelSubscriptionPacks(s.id, pack.userId, pack.type === 'god_pack', pack.type === 'upgraded_pack' || pack.type === 'god_pack');
+        const pack = await this.db.userPack.findFirst({
+          where: { stripeSubscriptionId: s.id }
+        });
+        if (!pack) break;
+
+        if (['canceled', 'incomplete_expired', 'unpaid', 'past_due'].includes(s.status)) {
+          await this.cancelSubscriptionPacks(s.id, pack.userId, pack.type === 'god_pack', pack.type === 'upgraded_pack' || pack.type === 'god_pack');
+          console.log(`[BUNDLES] Subscription ${s.id} updated to ${s.status}: cancelled perks for user ${pack.userId}`);
+        } else if (['active', 'trialing'].includes(s.status) && s.current_period_end) {
+          const periodEnd = new Date(s.current_period_end * 1000);
+          if (periodEnd > new Date()) {
+            await this.db.userPack.updateMany({
+              where: { stripeSubscriptionId: s.id },
+              data: { status: 'active', expiresAt: periodEnd }
+            });
+            if (pack.type === 'god_pack') {
+              await this.db.userPack.updateMany({
+                where: { userId: pack.userId, type: { in: ['auto_renew', 'upgraded_pack'] }, stripeSubscriptionId: null },
+                data: { status: 'active', expiresAt: periodEnd }
+              });
+              try { await this.assignDiscordRole(pack.userId); } catch {}
+            }
           }
         }
         break;
@@ -440,6 +518,30 @@ class BundleManager {
         const isAuto = p.type === 'auto_renew' || p.type === 'god_pack';
         const isGod = p.type === 'god_pack';
 
+        // Check if Stripe subscription was renewed before expiring
+        if (p.stripeSubscriptionId) {
+          try {
+            const sub = await getStripe().subscriptions.retrieve(p.stripeSubscriptionId);
+            if (['active', 'trialing'].includes(sub.status) && sub.current_period_end) {
+              const newExp = new Date(sub.current_period_end * 1000);
+              if (newExp > new Date()) {
+                await this.db.userPack.update({ where: { id: p.id }, data: { expiresAt: newExp } });
+                if (isGod) {
+                  await this.db.userPack.updateMany({
+                    where: { userId: p.userId, type: { in: ['auto_renew', 'upgraded_pack'] }, stripeSubscriptionId: null },
+                    data: { status: 'active', expiresAt: newExp }
+                  });
+                  try { await this.assignDiscordRole(p.userId); } catch {}
+                }
+                console.log(`[BUNDLES] Pack ${p.id} renewed via Stripe until ${newExp.toISOString()}`);
+                continue; // Preserved active
+              }
+            }
+          } catch (err) {
+            console.error(`[BUNDLES] Error checking Stripe renewal for ${p.stripeSubscriptionId}:`, err.message);
+          }
+        }
+
         if (isGod) {
           try { await this.removeDiscordRole(p.userId); } catch {}
           await this.db.userPack.updateMany({
@@ -479,14 +581,29 @@ class BundleManager {
           const sub = await getStripe().subscriptions.retrieve(pack.stripeSubscriptionId);
           const status = sub.status;
 
-          if (['canceled', 'incomplete_expired', 'unpaid'].includes(status)) {
+          if (['canceled', 'incomplete_expired', 'unpaid', 'past_due', 'paused'].includes(status)) {
             await this.cancelSubscriptionPacks(pack.stripeSubscriptionId, pack.userId, pack.type === 'god_pack', pack.type === 'upgraded_pack' || pack.type === 'god_pack');
-            console.log(`[BUNDLES] Stripe verification: sub ${pack.stripeSubscriptionId} (${status})`);
+            console.log(`[BUNDLES] Stripe verification: sub ${pack.stripeSubscriptionId} (${status}) -> cancelled`);
+          } else if (['active', 'trialing'].includes(status) && sub.current_period_end) {
+            const periodEnd = new Date(sub.current_period_end * 1000);
+            if (periodEnd > new Date()) {
+              await this.db.userPack.updateMany({
+                where: { stripeSubscriptionId: pack.stripeSubscriptionId },
+                data: { status: 'active', expiresAt: periodEnd }
+              });
+              if (pack.type === 'god_pack') {
+                await this.db.userPack.updateMany({
+                  where: { userId: pack.userId, type: { in: ['auto_renew', 'upgraded_pack'] }, stripeSubscriptionId: null },
+                  data: { status: 'active', expiresAt: periodEnd }
+                });
+                try { await this.assignDiscordRole(pack.userId); } catch {}
+              }
+            }
           }
         } catch (err) {
           if (err.response?.status === 404) {
             await this.cancelSubscriptionPacks(pack.stripeSubscriptionId, pack.userId, pack.type === 'god_pack', pack.type === 'upgraded_pack' || pack.type === 'god_pack');
-            console.log(`[BUNDLES] Stripe verification: sub ${pack.stripeSubscriptionId} not found (deleted)`);
+            console.log(`[BUNDLES] Stripe verification: sub ${pack.stripeSubscriptionId} not found (deleted) -> cancelled`);
           } else {
             console.error(`[BUNDLES] Stripe verification error for ${pack.stripeSubscriptionId}:`, err.message);
           }
