@@ -1,8 +1,19 @@
 const axios = require("axios");
+const { normalizeIp } = require("./antiVpnAllowlist");
 
 module.exports = async (key, db, ip, res) => {
+  if (!ip) {
+    return { blocked: false, ip: null };
+  }
+
+  const cleanIp = normalizeIp(ip) || ip;
+  if (!cleanIp) {
+    return { blocked: false, ip: null };
+  }
+
+  const cacheKey = `vpncheckcache-${cleanIp}`;
+
   let ipcache = null;
-  const cacheKey = `vpncheckcache-${ip}`;
   const row = await db.heliactyl.findUnique({ where: { key: cacheKey } });
   if (row) {
     try {
@@ -17,7 +28,7 @@ module.exports = async (key, db, ip, res) => {
   
   if (!ipcache) {
     try {
-      const response = await axios.get(`https://api.ippriv.com/api/security/${ip}`, {
+      const response = await axios.get(`https://api.ippriv.com/api/security/${encodeURIComponent(cleanIp)}`, {
         timeout: 5000
       });
       
@@ -33,7 +44,7 @@ module.exports = async (key, db, ip, res) => {
       }
     } catch (error) {
       // Silently fail - allow request if check fails
-      return { blocked: false, ip: ip };
+      return { blocked: false, ip: cleanIp };
     }
   }
   
@@ -49,10 +60,10 @@ module.exports = async (key, db, ip, res) => {
   
   // Block if VPN/proxy detected
   if (ipcache === "yes") {
-    return { blocked: true, ip: ip };
+    return { blocked: true, ip: cleanIp };
   }
   
-  return { blocked: false, ip: ip };
+  return { blocked: false, ip: cleanIp };
 };
 
 /**
@@ -61,7 +72,9 @@ module.exports = async (key, db, ip, res) => {
 module.exports.checkAndBlock = async (key, db, ip, res) => {
   const result = await module.exports(key, db, ip);
   if (result.blocked) {
-    res.send('VPN Detected! Please disable your VPN to continue.');
+    if (res && typeof res.send === 'function') {
+      res.send('VPN Detected! Please disable your VPN to continue.');
+    }
     return true;
   }
   return false;

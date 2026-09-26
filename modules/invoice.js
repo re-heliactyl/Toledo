@@ -22,7 +22,7 @@ class InvoiceGenerator {
     const logo = settings.website?.logo || '';
 
     // Determine what was purchased and what the customer actually paid
-    const { description, quantity, paidAmount, itemType } = this._getItemInfo(transaction, details);
+    const { description, quantity, paidAmount, itemType, currency } = this._getItemInfo(transaction, details);
 
     // The paid amount is the total including VAT (EU B2C norm)
     const total = paidAmount;
@@ -64,18 +64,19 @@ class InvoiceGenerator {
     let quantity = 1;
     let paidAmount = 0;
     let itemType = 'credit';
+    let currency = (details.currency || (details.amount_usd !== undefined || details.price_usd !== undefined ? 'USD' : 'EUR')).toUpperCase();
 
     if (details.package_amount) {
-      // Coin purchase — details.price_usd is the total paid (incl. VAT)
+      // Coin purchase — details.price_eur is the total paid (incl. VAT)
       quantity = details.package_amount;
-      paidAmount = details.price_usd;
+      paidAmount = details.price_eur !== undefined ? details.price_eur : (details.price_usd !== undefined ? details.price_usd : 0);
       description = `Purchase of ${details.package_amount} Coins`;
       itemType = 'coins';
-    } else if (details.amount_usd) {
-      // Credit top-up — details.amount_usd is the total paid (incl. VAT)
+    } else if (details.amount_eur !== undefined || details.amount_usd !== undefined) {
+      // Credit top-up — details.amount_eur is the total paid (incl. VAT)
       quantity = 1;
-      paidAmount = details.amount_usd;
-      description = `Credit Top-up ($${details.amount_usd})`;
+      paidAmount = details.amount_eur !== undefined ? details.amount_eur : details.amount_usd;
+      description = currency === "USD" ? ("Credit Top-up ($" + paidAmount + ")") : ("Credit Top-up (" + paidAmount + " €)");
       itemType = 'credit';
     } else if (details.resource) {
       // Store purchase with coins — no real money, no VAT
@@ -84,9 +85,9 @@ class InvoiceGenerator {
       description = `Resource Purchase: ${details.resource} x${quantity}`;
       itemType = 'resource';
     } else if (details.bundle) {
-      // Bundle purchase — price_usd is the total paid (incl. VAT)
+      // Bundle purchase — price_eur is the total paid (incl. VAT)
       quantity = 1;
-      paidAmount = details.price_usd || (Math.abs(transaction.amount) / 100);
+      paidAmount = details.price_eur !== undefined ? details.price_eur : (details.price_usd !== undefined ? details.price_usd : (Math.abs(transaction.amount) / 100));
       description = `Bundle ${details.name || details.bundle}`;
       itemType = 'bundle';
     } else {
@@ -96,10 +97,10 @@ class InvoiceGenerator {
       description = transaction.description || 'Purchase';
     }
 
-    return { description, quantity, paidAmount, itemType };
+    return { description, quantity, paidAmount, itemType, currency };
   }
 
-  _buildHtml({ seller, logo, vatRate, firstName, lastName, email, invoiceId, invoiceDate, paymentMethod, description, quantity, unitPrice, subtotal, vatAmount, total, itemType, fmt }) {
+  _buildHtml({ seller, logo, vatRate, firstName, lastName, email, invoiceId, invoiceDate, paymentMethod, description, quantity, unitPrice, subtotal, vatAmount, total, itemType, fmt, currency = "EUR" }) {
     const dateStr = invoiceDate.toLocaleDateString('en-US', {
       year: 'numeric', month: 'long', day: 'numeric'
     });
@@ -378,8 +379,8 @@ class InvoiceGenerator {
       <tr>
         <td style="font-weight:500">${description}</td>
         <td>${quantity}</td>
-        <td>${fmt(unitPrice)} USD</td>
-        <td>${fmt(subtotal)} USD</td>
+        <td>${fmt(unitPrice)} ${currency}</td>
+        <td>${fmt(subtotal)} ${currency}</td>
       </tr>
     </tbody>
   </table>
@@ -389,15 +390,15 @@ class InvoiceGenerator {
     <div class="totals-inner">
       <div class="total-row sub">
         <span>Subtotal</span>
-        <span>${fmt(subtotal)} USD</span>
+        <span>${fmt(subtotal)} ${currency}</span>
       </div>
       <div class="total-row">
         <span>VAT (${vatRate}%)</span>
-        <span>${fmt(vatAmount)} USD</span>
+        <span>${fmt(vatAmount)} ${currency}</span>
       </div>
       <div class="total-row grand">
         <span>Total (incl. VAT)</span>
-        <span>${fmt(total)} USD</span>
+        <span>${fmt(total)} ${currency}</span>
       </div>
     </div>
   </div>

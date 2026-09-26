@@ -6,6 +6,7 @@ const log = require("../handlers/log.js");
 const adminjs = require("./admin.js");
 const { validate, schemas } = require("../handlers/validate.js");
 const createAuthz = require('../handlers/authz');
+const { getClientIp } = require('../handlers/antiVpnAllowlist');
 
 const HeliactylModule = {
   "name": "Store",
@@ -391,7 +392,7 @@ module.exports.load = function (app, db) {
       afkManager.scheduleNextReward(userId, ws);
       afkManager.startStateUpdates(userId, ws);
 
-      const clientIp = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress?.replace('::ffff:', '');
+      const clientIp = getClientIp(req);
       const user = await db.user.findUnique({ where: { id: userId }, select: { email: true, discordId: true } });
       log('afk_connect', `**${sessionUser.username}** started an AFK session\nEmail: \`${user?.email || 'unknown'}\`\nDiscord: \`${user?.discordId || 'none'}\`\nIP: \`${clientIp || 'unknown'}\``);
 

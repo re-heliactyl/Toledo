@@ -162,9 +162,16 @@ const schemas = {
 
   // Billing checkout
   billingCheckout: z.object({
+    amount_eur: z.number({ invalid_type_error: 'Amount must be a number' })
+      .min(1, 'Minimum amount is 1 €')
+      .max(1000, 'Maximum amount is 1000 €')
+      .optional(),
     amount_usd: z.number({ invalid_type_error: 'Amount must be a number' })
       .min(1, 'Minimum amount is $1')
       .max(1000, 'Maximum amount is $1000')
+      .optional()
+  }).refine(data => (data.amount_eur !== undefined) !== (data.amount_usd !== undefined), {
+    message: 'Specify exactly one amount currency'
   }),
 
   // User ID parameter
