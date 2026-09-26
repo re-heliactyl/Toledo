@@ -121,7 +121,7 @@ async function load(app, db) {
    * PATCH /api/admin/roles/:id
    * Update an existing role
    */
-  router.patch('/api/admin/roles/:id', authz.requirePermission('admin.roles.manage'), async (req, res) => {
+  router.patch('/admin/roles/:id', authz.requirePermission('admin.roles.manage'), async (req, res) => {
     try {
       const { id } = req.params;
       const { name, description, color, priority, permissions } = req.body;
@@ -194,7 +194,7 @@ async function load(app, db) {
    * DELETE /api/admin/roles/:id
    * Delete a custom role
    */
-  router.delete('/api/admin/roles/:id', authz.requirePermission('admin.roles.manage'), async (req, res) => {
+  router.delete('/admin/roles/:id', authz.requirePermission('admin.roles.manage'), async (req, res) => {
     try {
       const { id } = req.params;
 
@@ -220,7 +220,7 @@ async function load(app, db) {
    * GET /api/admin/users/:id/roles
    * Fetch roles assigned to a user
    */
-  router.get('/api/admin/users/:id/roles', authz.requirePermission('admin.roles.manage'), async (req, res) => {
+  router.get('/admin/users/:id/roles', authz.requirePermission('admin.roles.manage'), async (req, res) => {
     try {
       const { id } = req.params;
 
@@ -253,7 +253,7 @@ async function load(app, db) {
    * POST /api/admin/users/:id/roles
    * Update roles assigned to a user (takes array of roleIds)
    */
-  router.post('/api/admin/users/:id/roles', authz.requirePermission('admin.roles.manage'), async (req, res) => {
+  router.post('/admin/users/:id/roles', authz.requirePermission('admin.roles.manage'), async (req, res) => {
     try {
       const { id } = req.params;
       const { roleIds } = req.body;
@@ -312,7 +312,7 @@ async function load(app, db) {
     }
   });
 
-  app.use(router);
+  app.use('/api', router);
 }
 
 module.exports = {
