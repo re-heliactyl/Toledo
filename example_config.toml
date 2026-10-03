@@ -213,3 +213,11 @@ name = "main"
 domain = "example.com"
 zone_id = "your-cloudflare-zone-id"
 is_default = true
+
+# ---------------------------------
+# Overnode Desktop App Configuration
+# ---------------------------------
+[desktop_app]
+enabled = true # Set to false to disable the Overnode Desktop showcase & download buttons on the home page
+updater_url = "url-updater-overnode" # Official updater service URL
+

@@ -25,9 +25,97 @@ const settingsCache = new LRU({
   ttl: 1000 * 30 // 30s
 });
 
+const appReleaseCache = new LRU({
+  max: 5,
+  ttl: 1000 * 60 * 5 // 5 minutes
+});
+
+async function fetchLatestAppRelease() {
+  const cached = appReleaseCache.get('latest');
+  if (cached) return cached;
+
+  const updaterBase = (settings.desktop_app?.updater_url || "").trim().replace(/\/$/, "");
+
+  const fallback = {
+    enabled: settings.desktop_app?.enabled !== false,
+    latestVersion: "1.1.57",
+    releaseNotes: "Official Overnode Desktop native application for macOS and Windows.",
+    publishedAt: new Date().toISOString(),
+    platforms: {
+      mac: {
+        name: "macOS",
+        arch: "Apple Silicon (arm64)",
+        version: "1.1.57",
+        format: "dmg",
+        downloadUrl: updaterBase ? `${updaterBase}/api/v1/update/download?platform=darwin-arm64&type=dmg` : "/api/v5/app/download/mac",
+        publishedAt: new Date().toISOString()
+      },
+      windows: {
+        name: "Windows",
+        arch: "x64 Native",
+        version: "1.1.57",
+        format: "msi",
+        downloadUrl: updaterBase ? `${updaterBase}/api/v1/update/download?platform=win-x64&type=msi` : "/api/v5/app/download/windows",
+        publishedAt: new Date().toISOString()
+      }
+    }
+  };
+
+  if (!updaterBase) {
+    appReleaseCache.set('latest', fallback);
+    return fallback;
+  }
+
+  try {
+    const [macRes, winRes] = await Promise.allSettled([
+      axios.get(`${updaterBase}/api/v1/update/check?platform=darwin-arm64`, { timeout: 4000 }),
+      axios.get(`${updaterBase}/api/v1/update/check?platform=win-x64`, { timeout: 4000 })
+    ]);
+
+    const macData = macRes.status === 'fulfilled' && macRes.value?.data ? macRes.value.data : null;
+    const winData = winRes.status === 'fulfilled' && winRes.value?.data ? winRes.value.data : null;
+
+    const macVersion = macData?.latestVersion || fallback.platforms.mac.version;
+    const winVersion = winData?.latestVersion || fallback.platforms.windows.version;
+
+    const result = {
+      enabled: settings.desktop_app?.enabled !== false,
+      latestVersion: macVersion || winVersion || "1.1.57",
+      releaseNotes: macData?.releaseNotes || winData?.releaseNotes || fallback.releaseNotes,
+      publishedAt: macData?.publishedAt || winData?.publishedAt || fallback.publishedAt,
+      platforms: {
+        mac: {
+          name: "macOS",
+          arch: "Apple Silicon (arm64)",
+          version: macVersion,
+          format: "dmg",
+          downloadUrl: `${updaterBase}/api/v1/update/download?platform=darwin-arm64&type=dmg`,
+          publishedAt: macData?.publishedAt || fallback.platforms.mac.publishedAt
+        },
+        windows: {
+          name: "Windows",
+          arch: "x64 Native",
+          version: winVersion,
+          format: "msi",
+          downloadUrl: `${updaterBase}/api/v1/update/download?platform=win-x64&type=msi`,
+          publishedAt: winData?.publishedAt || fallback.platforms.windows.publishedAt
+        }
+      }
+    };
+
+    appReleaseCache.set('latest', result);
+    return result;
+  } catch (err) {
+    appReleaseCache.set('latest', fallback);
+    return fallback;
+  }
+}
+
 function getPublicSettings() {
   const cached = settingsCache.get('public');
   if (cached) return cached;
+
+  const isDesktopAppEnabled = settings.desktop_app?.enabled !== false;
 
   const payload = {
     name: settings.website.name || "Heliactyl",
@@ -37,6 +125,11 @@ function getPublicSettings() {
     features: {
       coinTransfer: settings.api?.client?.coins?.transfer?.enabled ?? true,
       boosts: settings.api?.client?.coins?.boosts?.enabled ?? true,
+      desktopApp: isDesktopAppEnabled,
+    },
+    desktopApp: {
+      enabled: isDesktopAppEnabled,
+      updaterUrl: settings.desktop_app?.updater_url || ""
     }
   };
   settingsCache.set('public', payload);
@@ -128,6 +221,44 @@ module.exports.load = async function (app, db) {
 
   app.get("/api/v5/settings", async (req, res) => {
     res.json(getPublicSettings());
+  });
+
+  app.get("/api/v5/app/latest", async (req, res) => {
+    const isAppEnabled = settings.desktop_app?.enabled !== false;
+    if (!isAppEnabled) {
+      return res.json({
+        enabled: false,
+        message: "Overnode Desktop is disabled in configuration."
+      });
+    }
+
+    const releaseInfo = await fetchLatestAppRelease();
+    res.json(releaseInfo);
+  });
+
+  app.get("/api/v5/app/download/:platform", async (req, res) => {
+    const isAppEnabled = settings.desktop_app?.enabled !== false;
+    if (!isAppEnabled) {
+      return res.status(403).json({ error: "Overnode Desktop download is disabled." });
+    }
+
+    const rawPlatform = (req.params.platform || "").toLowerCase();
+    const format = (req.query.format || "").toLowerCase(); // "zip", "dmg", "msi"
+    const updaterBase = (settings.desktop_app?.updater_url || "").trim().replace(/\/$/, "");
+
+    if (!updaterBase) {
+      return res.status(503).json({ error: "Desktop app updater URL is not configured in config.toml." });
+    }
+
+    if (rawPlatform === "mac" || rawPlatform === "macos" || rawPlatform === "darwin") {
+      return res.redirect(`${updaterBase}/api/v1/update/download?platform=darwin-arm64&type=dmg`);
+    }
+
+    if (rawPlatform === "win" || rawPlatform === "windows" || rawPlatform === "win-x64") {
+      return res.redirect(`${updaterBase}/api/v1/update/download?platform=win-x64&type=msi`);
+    }
+
+    return res.status(400).json({ error: "Invalid platform. Use 'mac' or 'windows'." });
   });
 
   app.get("/api/v5/resources", async (req, res) => {
