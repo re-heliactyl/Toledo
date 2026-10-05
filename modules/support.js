@@ -108,28 +108,6 @@ module.exports.load = async function (app, db) {
     }
   });
 
-  app.post("/api/notifications/:id/read", async (req, res) => {
-    if (!authz.hasUserSession(req)) return res.status(401).json({ error: "Unauthorized" });
-    const sessionUser = authz.getSessionUser(req);
-
-    try {
-      await db.notification.updateMany({
-        where: {
-          id: req.params.id,
-          userId: sessionUser.id
-        },
-        data: {
-          read: true
-        }
-      });
-
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error marking notification as read:", error);
-      res.status(500).json({ error: "Internal server error" });
-    }
-  });
-
   // Get ticket count for user
   app.get("/api/tickets/count", async (req, res) => {
     if (!authz.hasUserSession(req)) return res.status(401).json({ error: "Unauthorized" });

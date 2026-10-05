@@ -76,18 +76,6 @@ module.exports.load = async function (app, db) {
     res.redirect(settings.pterodactyl.domain);
   });
 
-  app.get("/notifications", async (req, res) => {
-    if (!authz.hasUserSession(req)) return res.redirect("/login");
-    const sessionUser = authz.getSessionUser(req);
-
-    const notifications = await db.notification.findMany({
-      where: { userId: sessionUser.id },
-      orderBy: { createdAt: 'desc' }
-    });
-
-    res.json(notifications);
-  });
-
   app.get("/regen", async (req, res) => {
     if (!authz.hasPterodactylSession(req) || !authz.hasUserSession(req)) return res.redirect("/login");
     if (settings.api.client.allow.regen !== true) return res.send("You cannot regenerate your password currently.");
