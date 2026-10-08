@@ -14,9 +14,9 @@ const HeliactylModule = {
   target_platform: "10.0.0",
   description: "Configurable server renewal and expiration management",
   author: {
-    name: "Matt James",
-    email: "me@ether.pizza",
-    url: "https://ether.pizza"
+    name: "aachul123",
+    email: "ludo@overnode.fr",
+    url: "https://achul123.pages.dev/"
   },
   dependencies: [],
   permissions: [],
@@ -66,10 +66,6 @@ function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function getRenewalKey(identifier) {
-  return `${RENEWAL_KEY_PREFIX}${identifier}`;
-}
-
 function isValidDateString(value) {
   return typeof value === "string" && !Number.isNaN(new Date(value).getTime());
 }
@@ -115,51 +111,139 @@ function parseRenewalRow(row) {
   }
 }
 
-async function writeRenewalRecord(db, identifier, data) {
-  const payload = {
-    ...data,
-    serverIdentifier: identifier,
-    updatedAt: new Date().toISOString()
-  };
+function formatRenewalRecord(row) {
+  if (!row) return null;
+  const expiresIso = row.expiresAt instanceof Date ? row.expiresAt.toISOString() : (row.expiresAt ? new Date(row.expiresAt).toISOString() : null);
+  const lastRenewedIso = row.lastRenewedAt instanceof Date ? row.lastRenewedAt.toISOString() : (row.lastRenewedAt ? new Date(row.lastRenewedAt).toISOString() : null);
+  const expiredIso = row.expiredAt instanceof Date ? row.expiredAt.toISOString() : (row.expiredAt ? new Date(row.expiredAt).toISOString() : null);
+  const lastAutoRenewedIso = row.lastAutoRenewedAt instanceof Date ? row.lastAutoRenewedAt.toISOString() : (row.lastAutoRenewedAt ? new Date(row.lastAutoRenewedAt).toISOString() : null);
 
-  await db.heliactyl.upsert({
-    where: { key: getRenewalKey(identifier) },
-    update: { value: JSON.stringify(payload) },
+  return {
+    id: row.id,
+    serverId: row.serverId,
+    serverIdentifier: row.serverId,
+    panelId: row.panelId ?? null,
+    userId: row.userId ?? null,
+    expiresAt: expiresIso,
+    nextRenewalAt: expiresIso,
+    lastRenewedAt: lastRenewedIso,
+    expiredAt: expiredIso,
+    lastAutoRenewedAt: lastAutoRenewedIso,
+    isActive: row.isActive ?? true,
+    renewalCount: row.renewalCount ?? 0,
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : (row.createdAt ? new Date(row.createdAt).toISOString() : null),
+    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : (row.updatedAt ? new Date(row.updatedAt).toISOString() : null)
+  };
+}
+
+async function writeRenewalRecord(db, identifier, data) {
+  let validUserId = undefined;
+  if (data.userId !== undefined) {
+    if (data.userId) {
+      const user = await db.user.findUnique({ where: { id: data.userId }, select: { id: true } }).catch(() => null);
+      validUserId = user ? user.id : null;
+    } else {
+      validUserId = null;
+    }
+  }
+
+  const expiresAtRaw = data.nextRenewalAt !== undefined ? data.nextRenewalAt : data.expiresAt;
+  let parsedExpiresAt = undefined;
+  if (expiresAtRaw !== undefined) {
+    if (expiresAtRaw) {
+      const d = new Date(expiresAtRaw);
+      parsedExpiresAt = isNaN(d.getTime()) ? new Date() : d;
+    } else {
+      parsedExpiresAt = new Date();
+    }
+  }
+
+  let parsedLastRenewedAt = undefined;
+  if (data.lastRenewedAt !== undefined) {
+    if (data.lastRenewedAt) {
+      const d = new Date(data.lastRenewedAt);
+      parsedLastRenewedAt = isNaN(d.getTime()) ? null : d;
+    } else {
+      parsedLastRenewedAt = null;
+    }
+  }
+
+  let parsedExpiredAt = undefined;
+  if (data.expiredAt !== undefined) {
+    if (data.expiredAt) {
+      const d = new Date(data.expiredAt);
+      parsedExpiredAt = isNaN(d.getTime()) ? null : d;
+    } else {
+      parsedExpiredAt = null;
+    }
+  }
+
+  let parsedLastAutoRenewedAt = undefined;
+  if (data.lastAutoRenewedAt !== undefined) {
+    if (data.lastAutoRenewedAt) {
+      const d = new Date(data.lastAutoRenewedAt);
+      parsedLastAutoRenewedAt = isNaN(d.getTime()) ? null : d;
+    } else {
+      parsedLastAutoRenewedAt = null;
+    }
+  }
+
+  let parsedRenewalCount = undefined;
+  if (data.renewalCount !== undefined) {
+    parsedRenewalCount = toNonNegativeInt(data.renewalCount, 0);
+  }
+
+  let parsedIsActive = undefined;
+  if (data.isActive !== undefined) {
+    parsedIsActive = Boolean(data.isActive);
+  }
+
+  const row = await db.serverRenewal.upsert({
+    where: { serverId: identifier },
+    update: {
+      panelId: data.panelId !== undefined ? (data.panelId !== null ? Number(data.panelId) : null) : undefined,
+      userId: validUserId !== undefined ? validUserId : undefined,
+      expiresAt: parsedExpiresAt !== undefined ? parsedExpiresAt : undefined,
+      lastRenewedAt: parsedLastRenewedAt !== undefined ? parsedLastRenewedAt : undefined,
+      renewalCount: parsedRenewalCount !== undefined ? parsedRenewalCount : undefined,
+      isActive: parsedIsActive !== undefined ? parsedIsActive : undefined,
+      expiredAt: parsedExpiredAt !== undefined ? parsedExpiredAt : undefined,
+      lastAutoRenewedAt: parsedLastAutoRenewedAt !== undefined ? parsedLastAutoRenewedAt : undefined
+    },
     create: {
-      key: getRenewalKey(identifier),
-      value: JSON.stringify(payload)
+      serverId: identifier,
+      panelId: data.panelId !== undefined && data.panelId !== null ? Number(data.panelId) : null,
+      userId: validUserId !== undefined ? validUserId : null,
+      expiresAt: parsedExpiresAt !== undefined ? parsedExpiresAt : new Date(),
+      lastRenewedAt: parsedLastRenewedAt !== undefined ? parsedLastRenewedAt : null,
+      renewalCount: parsedRenewalCount !== undefined ? parsedRenewalCount : 0,
+      isActive: parsedIsActive !== undefined ? parsedIsActive : true,
+      expiredAt: parsedExpiredAt !== undefined ? parsedExpiredAt : null,
+      lastAutoRenewedAt: parsedLastAutoRenewedAt !== undefined ? parsedLastAutoRenewedAt : null
     }
   });
 
-  return payload;
+  return formatRenewalRecord(row);
 }
 
 async function readRenewalRecord(db, identifier) {
-  const row = await db.heliactyl.findUnique({
-    where: { key: getRenewalKey(identifier) }
-  });
-
-  if (!row) {
+  if (!identifier) {
     return null;
   }
 
-  const parsed = parseRenewalRow(row);
-  if (parsed) {
-    return parsed;
-  }
+  const row = await db.serverRenewal.findUnique({
+    where: { serverId: identifier }
+  });
 
-  await db.heliactyl.delete({ where: { key: row.key } }).catch(() => null);
-  return null;
+  return formatRenewalRecord(row);
 }
 
-async function readAllRenewalRows(db) {
-  return db.heliactyl.findMany({
-    where: {
-      key: {
-        startsWith: RENEWAL_KEY_PREFIX
-      }
-    }
+async function readAllRenewalRecords(db) {
+  const rows = await db.serverRenewal.findMany({
+    orderBy: { expiresAt: "asc" }
   });
+
+  return rows.map(formatRenewalRecord);
 }
 
 async function removeRenewalRecordByIdentifier(db, identifier) {
@@ -167,7 +251,7 @@ async function removeRenewalRecordByIdentifier(db, identifier) {
     return false;
   }
 
-  await db.heliactyl.delete({ where: { key: getRenewalKey(identifier) } }).catch(() => null);
+  await db.serverRenewal.delete({ where: { serverId: identifier } }).catch(() => null);
   return true;
 }
 
@@ -227,11 +311,11 @@ async function initializeServerRenewal(db, serverAttributes, userId = null, opti
     changed = true;
   }
 
-  if ((serverAttributes.id ?? null) !== (sanitizedExisting.record.panelId ?? null)) {
+  if (serverAttributes.id !== undefined && (serverAttributes.id ?? null) !== (sanitizedExisting.record.panelId ?? null)) {
     changed = true;
   }
 
-  if ((userId ?? sanitizedExisting.record.userId ?? null) !== (sanitizedExisting.record.userId ?? null)) {
+  if (userId !== null && userId !== undefined && userId !== (sanitizedExisting.record.userId ?? null)) {
     changed = true;
   }
 
@@ -253,24 +337,25 @@ async function initializeServerRenewal(db, serverAttributes, userId = null, opti
 }
 
 async function removeServerRenewal(db, serverDetails = {}) {
-  if (serverDetails.identifier) {
-    return removeRenewalRecordByIdentifier(db, serverDetails.identifier);
+  const identifier = serverDetails.identifier || serverDetails.serverId;
+  if (identifier) {
+    return removeRenewalRecordByIdentifier(db, identifier);
   }
 
   if (!serverDetails.panelId) {
     return false;
   }
 
-  const rows = await readAllRenewalRows(db);
-  for (const row of rows) {
-    const record = parseRenewalRow(row);
-    if (record?.panelId?.toString() === serverDetails.panelId.toString()) {
-      await db.heliactyl.delete({ where: { key: row.key } }).catch(() => null);
-      return true;
-    }
+  const panelIdNum = Number(serverDetails.panelId);
+  if (!Number.isInteger(panelIdNum)) {
+    return false;
   }
 
-  return false;
+  await db.serverRenewal.deleteMany({
+    where: { panelId: panelIdNum }
+  }).catch(() => null);
+
+  return true;
 }
 
 async function getRenewalRecord(db, identifier, fallbackUserId = null) {
@@ -424,16 +509,15 @@ async function syncRenewalRecords(db) {
     panelServerMap.set(attributes.identifier, attributes);
   }
 
-  const rows = await readAllRenewalRows(db);
-  for (const row of rows) {
-    const record = parseRenewalRow(row);
+  const records = await readAllRenewalRecords(db);
+  for (const record of records) {
     if (!record?.serverIdentifier) {
       continue;
     }
 
     const attributes = panelServerMap.get(record.serverIdentifier);
     if (!attributes) {
-      await db.heliactyl.delete({ where: { key: row.key } }).catch(() => null);
+      await removeRenewalRecordByIdentifier(db, record.serverIdentifier);
       continue;
     }
 
@@ -518,6 +602,7 @@ async function handleExpiredRecord(db, record, config) {
           ...record,
           lastRenewedAt: renewalDates.lastRenewedAt,
           nextRenewalAt: renewalDates.nextRenewalAt,
+          expiresAt: renewalDates.nextRenewalAt,
           expiredAt: null,
           isActive: true,
           renewalCount: (record.renewalCount || 0) + 1,
@@ -598,24 +683,18 @@ async function runRenewalMaintenance() {
       lastSyncAt = Date.now();
     }
 
-    const rows = await readAllRenewalRows(maintenanceDb);
-    for (const row of rows) {
-      const parsed = parseRenewalRow(row);
-      if (!parsed) {
-        await maintenanceDb.heliactyl.delete({ where: { key: row.key } }).catch(() => null);
+    const records = await readAllRenewalRecords(maintenanceDb);
+    for (const record of records) {
+      const refreshedRecord = await initializeServerRenewal(maintenanceDb, {
+        identifier: record.serverIdentifier,
+        id: record.panelId
+      }, record.userId, { allowCreate: false });
+
+      if (!refreshedRecord) {
         continue;
       }
 
-      const record = await initializeServerRenewal(maintenanceDb, {
-        identifier: parsed.serverIdentifier,
-        id: parsed.panelId
-      }, parsed.userId, { allowCreate: false });
-
-      if (!record) {
-        continue;
-      }
-
-      await handleExpiredRecord(maintenanceDb, record, config);
+      await handleExpiredRecord(maintenanceDb, refreshedRecord, config);
 
       if (config.apiDelayMs > 0) {
         await delay(config.apiDelayMs);
@@ -628,12 +707,53 @@ async function runRenewalMaintenance() {
   }
 }
 
+async function migrateLegacyRenewalRecords(db) {
+  try {
+    const rows = await db.heliactyl.findMany({
+      where: {
+        key: {
+          startsWith: RENEWAL_KEY_PREFIX
+        }
+      }
+    });
+
+    if (!rows || rows.length === 0) {
+      return;
+    }
+
+    console.log(`[Renewal] Migrating ${rows.length} legacy renewal records to ServerRenewal model...`);
+
+    for (const row of rows) {
+      try {
+        const parsed = parseRenewalRow(row);
+        const identifier = parsed?.serverIdentifier || row.key.replace(RENEWAL_KEY_PREFIX, "");
+
+        if (identifier) {
+          await writeRenewalRecord(db, identifier, parsed || {});
+        }
+
+        await db.heliactyl.delete({ where: { key: row.key } }).catch(() => null);
+      } catch (rowErr) {
+        console.error(`[Renewal] Failed to migrate legacy record ${row.key}:`, rowErr.message);
+      }
+    }
+
+    console.log("[Renewal] Legacy renewal migration completed.");
+  } catch (err) {
+    console.error("[Renewal] Failed to migrate legacy renewal records:", err.message);
+  }
+}
+
 module.exports.HeliactylModule = HeliactylModule;
 module.exports.initializeServerRenewal = initializeServerRenewal;
 module.exports.removeServerRenewal = removeServerRenewal;
+module.exports.writeRenewalRecord = writeRenewalRecord;
+module.exports.readRenewalRecord = readRenewalRecord;
 
 module.exports.load = async function (app, db) {
   maintenanceDb = db;
+
+  await migrateLegacyRenewalRecords(db);
 
   const router = express.Router();
 
@@ -682,6 +802,7 @@ module.exports.load = async function (app, db) {
         ...currentRecord,
         lastRenewedAt: renewalDates.lastRenewedAt,
         nextRenewalAt: renewalDates.nextRenewalAt,
+        expiresAt: renewalDates.nextRenewalAt,
         expiredAt: null,
         isActive: true,
         renewalCount: (currentRecord.renewalCount || 0) + 1

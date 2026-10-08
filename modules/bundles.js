@@ -405,9 +405,6 @@ class BundleManager {
     if (hadResourceBoost || isGodPack) {
       try { await this.downgradeUserServerResources(userId); } catch {}
     }
-
-    // Force server renewal re-check for auto-renew capability
-    try { await this.forceUserRenewalCheck(userId); } catch {}
   }
 
   /**
@@ -489,36 +486,6 @@ class BundleManager {
     }
   }
 
-  /**
-   * When auto-renew subscription ends, reset server renewal records
-   * so the maintenance cycle re-evaluates them immediately.
-   */
-  async forceUserRenewalCheck(userId) {
-    try {
-      const prefix = 'server-renewal:';
-      const rows = await this.db.heliactyl.findMany({
-        where: { key: { startsWith: prefix } }
-      });
-
-      for (const row of rows) {
-        try {
-          const record = JSON.parse(row.value);
-          if (record.userId === userId) {
-            // Set nextRenewalAt to the past so the maintenance cycle picks it up
-            record.nextRenewalAt = new Date(0).toISOString();
-            record.updatedAt = new Date().toISOString();
-            await this.db.heliactyl.update({
-              where: { key: row.key },
-              data: { value: JSON.stringify(record) }
-            });
-          }
-        } catch {}
-      }
-    } catch (e) {
-      console.error('[BUNDLES] Force renewal check error:', e);
-    }
-  }
-
   async checkExpiredPacks() {
     try {
       const expired = await this.db.userPack.findMany({ where: { status: 'active', expiresAt: { lte: new Date() } } });
@@ -579,7 +546,6 @@ class BundleManager {
 
         const isGod = freshPack.type === 'god_pack';
         const needsDowngrade = freshPack.type === 'upgraded_pack' || freshPack.type === 'god_pack';
-        const isAuto = freshPack.type === 'auto_renew' || freshPack.type === 'god_pack';
 
         if (isGod) {
           try { await this.removeDiscordRole(freshPack.userId); } catch {}
@@ -599,7 +565,6 @@ class BundleManager {
             try { await this.downgradeUserServerResources(freshPack.userId); } catch {}
           }
         }
-        if (isAuto) { try { await this.forceUserRenewalCheck(freshPack.userId); } catch {} }
       }
     } catch (e) { console.error('[BUNDLES] Expiry check error:', e); }
   }
@@ -759,3 +724,5 @@ module.exports.load = function (app, db) {
     } catch (e) { console.error('[BUNDLES] Webhook error:', e.message); res.status(400).json({ error: e.message }); }
   });
 };
+
+module.exports.BundleManager = BundleManager;

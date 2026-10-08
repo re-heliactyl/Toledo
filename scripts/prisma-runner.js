@@ -46,12 +46,20 @@ const schemaPath = provider === "mysql"
   : path.join("prisma", "schema.prisma");
 
 const env = { ...process.env };
-if (provider === "mysql" && env.MYSQL_DATABASE_URL && (!env.DATABASE_URL || env.DATABASE_URL.trim() === "")) {
-  env.DATABASE_URL = env.MYSQL_DATABASE_URL;
+if (provider === "mysql") {
+  if (env.MYSQL_DATABASE_URL) {
+    env.DATABASE_URL = env.MYSQL_DATABASE_URL;
+  } else if (!env.DATABASE_URL || env.DATABASE_URL.startsWith("file:")) {
+    env.DATABASE_URL = "mysql://root:password@localhost:3306/toledo";
+  }
 }
 
-if (provider === "sqlite" && env.SQLITE_DATABASE_URL && (!env.DATABASE_URL || env.DATABASE_URL.trim() === "")) {
-  env.DATABASE_URL = env.SQLITE_DATABASE_URL;
+if (provider === "sqlite") {
+  if (env.SQLITE_DATABASE_URL) {
+    env.DATABASE_URL = env.SQLITE_DATABASE_URL;
+  } else if (!env.DATABASE_URL || !env.DATABASE_URL.startsWith("file:")) {
+    env.DATABASE_URL = "file:./prisma/heliactyl.db";
+  }
 }
 
 function adjustDatabaseUrl(url) {
@@ -102,12 +110,21 @@ if (env.DATABASE_URL) {
   env.DATABASE_URL = adjustDatabaseUrl(env.DATABASE_URL);
 }
 
-const executable = process.platform === "win32" ? "npx prisma" : "npx";
-const result = spawnSync(executable, process.platform === "win32" ? [...prismaArgs, "--schema", schemaPath] : ["prisma", ...prismaArgs, "--schema", schemaPath], {
-  stdio: "inherit",
-  shell: process.platform === "win32",
-  env
-});
+const localPrisma = path.join(__dirname, "..", "node_modules", "prisma", "build", "index.js");
+let result;
+if (fs.existsSync(localPrisma)) {
+  result = spawnSync(process.execPath, [localPrisma, ...prismaArgs, "--schema", schemaPath], {
+    stdio: "inherit",
+    env
+  });
+} else {
+  const executable = process.platform === "win32" ? "npx prisma" : "npx";
+  result = spawnSync(executable, process.platform === "win32" ? [...prismaArgs, "--schema", schemaPath] : ["prisma", ...prismaArgs, "--schema", schemaPath], {
+    stdio: "inherit",
+    shell: process.platform === "win32",
+    env
+  });
+}
 
 if (result.error) {
   console.error(result.error);

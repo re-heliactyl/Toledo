@@ -70,6 +70,7 @@ model User {
   antiVpnAllowlists AntiVpnAllowlistUser[]
   packs           UserPack[]
   roles           UserRole[]
+  serverRenewals  ServerRenewal[]
 }
 
 model AntiVpnAllowlist {
@@ -455,5 +456,28 @@ model UserRole {
   @@unique([userId, roleId])
   @@index([userId])
   @@index([roleId])
+}
+
+model ServerRenewal {
+  id                String    @id @default(cuid())
+  serverId          String    @unique @db.VarChar(191)
+  panelId           Int?
+  userId            String?
+  expiresAt         DateTime
+  lastRenewedAt     DateTime?
+  renewalCount      Int       @default(0)
+  isActive          Boolean   @default(true)
+  expiredAt         DateTime?
+  lastAutoRenewedAt DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([panelId])
+  @@index([expiresAt])
+  @@index([renewalCount])
+  @@index([lastRenewedAt])
+  @@index([userId])
 }
 
