@@ -8,7 +8,7 @@
 # Heliactyl Release Information
 # ---------------------------------
 platform_codename = "Toledo"
-platform_level = 424 # channel: development - 09-10-2026 (Toledo)
+platform_level = 425 # channel: development - 09-10-2026 (Toledo)
 version = "10.0.0"
 
 # ---------------------------------
