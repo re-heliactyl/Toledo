@@ -9,7 +9,7 @@ const settings = loadConfig("./config.toml");
 
 const HeliactylModule = {
   name: "Server -> Renewals",
-  version: "1.0.0",
+  version: "1.1.0",
   api_level: 4,
   target_platform: "10.0.0",
   description: "Configurable server renewal and expiration management",

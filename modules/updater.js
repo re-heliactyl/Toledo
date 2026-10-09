@@ -33,7 +33,7 @@ async function checkAdminStatus(req, res, db, requiredPerm = 'admin.updater.mana
   const HeliactylModule = {
   name: "Updater",
 
-  version: "1.0.0",
+  version: "1.1.0",
   api_level: 4,
   target_platform: "10.0.0",
   description: "Auto-update system — DB-based config, admin UI, per-server tracking",

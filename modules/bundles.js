@@ -7,11 +7,15 @@ const Stripe = require('stripe');
 
 const HeliactylModule = {
   "name": "Bundles",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "api_level": 4,
   "target_platform": "10.0.0",
   "description": "Bundle subscriptions (Auto Renew, Upgraded Pack, God Pack)",
-  "author": { "name": "Overnode", "email": "contact@overnode.fr", "url": "https://overnode.fr" },
+  "author": {
+    "name": "aachul123",
+    "email": "ludo@overnode.fr",
+    "url": "https://achul123.pages.dev/"
+  },
   "dependencies": [], "permissions": [], "routes": [], "config": {}, "hooks": [],
   "tags": ['core'], "license": "MIT"
 };

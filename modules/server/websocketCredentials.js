@@ -1,5 +1,25 @@
 const axios = require("axios");
 
+const HeliactylModule = {
+  name: "WebSocket Credentials",
+  version: "1.0.0",
+  api_level: 4,
+  target_platform: "10.0.0",
+  description: "WebSocket credential caching and request deduplication",
+  author: {
+    name: "aachul123",
+    email: "ludo@overnode.fr",
+    url: "https://achul123.pages.dev/"
+  },
+  dependencies: [],
+  permissions: [],
+  routes: [],
+  config: {},
+  hooks: [],
+  tags: ["server", "websocket"],
+  license: "MIT"
+};
+
 const WEBSOCKET_CREDENTIAL_TTL_MS = 9 * 60 * 1000;
 const websocketCredentialCache = new Map();
 const websocketCredentialRequests = new Map();
@@ -61,6 +81,8 @@ async function fetchWebSocketCredentials({ serverId, panelUrl, apiKey }) {
 }
 
 module.exports = {
+  HeliactylModule,
+  load: async function () {},
   fetchWebSocketCredentials,
   invalidateWebSocketCredentials,
 };

@@ -11,7 +11,7 @@ const createAuthz = require('../handlers/authz');
 
 const HeliactylModule = {
   "name": "Two-factor authentication",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "api_level": 4,
   "target_platform": "10.0.0",
   "description": "Two-factor authentication module for Heliactyl Next",
@@ -20,6 +20,13 @@ const HeliactylModule = {
     "email": "me@ether.pizza",
     "url": "https://ether.pizza"
   },
+  "contributors": [
+    {
+      "name": "aachul123",
+      "email": "ludo@overnode.fr",
+      "url": "https://achul123.pages.dev/"
+    }
+  ],
   "dependencies": [],
   "permissions": [],
   "routes": [

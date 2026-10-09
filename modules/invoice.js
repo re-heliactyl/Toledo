@@ -1,9 +1,34 @@
-const puppeteer = require('puppeteer');
+let puppeteer;
+try {
+  puppeteer = require('puppeteer');
+} catch (e) {
+  // Optional dependency, loaded on demand
+}
 const loadConfig = require('../handlers/config');
 const path = require('path');
 const fs = require('fs');
 
 const settings = loadConfig('./config.toml');
+
+const HeliactylModule = {
+  name: "Invoice Generator",
+  version: "1.1.0",
+  api_level: 4,
+  target_platform: "10.0.0",
+  description: "PDF invoice generation for billing module",
+  author: {
+    name: "aachul123",
+    email: "ludo@overnode.fr",
+    url: "https://achul123.pages.dev/"
+  },
+  dependencies: [],
+  permissions: [],
+  routes: [],
+  config: {},
+  hooks: [],
+  tags: ["billing", "invoices"],
+  license: "MIT"
+};
 
 class InvoiceGenerator {
   /**
@@ -13,6 +38,9 @@ class InvoiceGenerator {
    * @returns {Buffer} PDF buffer
    */
   async generateInvoice(transaction, user) {
+    if (!puppeteer) {
+      puppeteer = require('puppeteer');
+    }
     const details = typeof transaction.details === 'string'
       ? JSON.parse(transaction.details)
       : (transaction.details || {});
@@ -459,4 +487,8 @@ class InvoiceGenerator {
   }
 }
 
+InvoiceGenerator.HeliactylModule = HeliactylModule;
+InvoiceGenerator.load = async function () {};
 module.exports = InvoiceGenerator;
+module.exports.HeliactylModule = HeliactylModule;
+module.exports.load = async function () {};

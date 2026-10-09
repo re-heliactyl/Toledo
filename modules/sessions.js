@@ -7,7 +7,11 @@ const HeliactylModule = {
   api_level: 4,
   target_platform: '10.0.0',
   description: 'Active session management',
-  author: 'Heliactyl',
+  author: {
+    name: "aachul123",
+    email: "ludo@overnode.fr",
+    url: "https://achul123.pages.dev/"
+  },
   dependencies: [],
   tags: ['core'],
   license: 'MIT'

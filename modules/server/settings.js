@@ -15,10 +15,10 @@ const HeliactylModule = {
     "target_platform": "10.0.0",
     "description": "Core module",
     "author": {
-        "name": "Matt James",
-        "email": "me@ether.pizza",
-        "url": "https://ether.pizza"
-    },
+    "name": "Matt James",
+    "email": "me@ether.pizza",
+    "url": "https://ether.pizza"
+  },
     "dependencies": [],
     "permissions": [],
     "routes": [],

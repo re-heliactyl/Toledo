@@ -20,14 +20,14 @@ const LAST_SYNC_KEY = 'locations-nodes-last-sync';
 
 const HeliactylModule = {
   name: 'Locations & Nodes',
-  version: '1.0.0',
+  version: '1.1.0',
   api_level: 4,
   target_platform: '10.0.0',
   description: 'Dynamic location and node management with Pterodactyl sync',
   author: {
-    name: 'aachul123',
-    email: 'ludo@overnode.fr',
-    url: 'https://achul123.pages.dev/'
+    name: "aachul123",
+    email: "ludo@overnode.fr",
+    url: "https://achul123.pages.dev/"
   },
   dependencies: [],
   permissions: [],

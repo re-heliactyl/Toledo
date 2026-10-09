@@ -4,7 +4,7 @@ const { PERMISSION_CATEGORIES, ALL_PERMISSION_KEYS, isValidPermission } = requir
 
 const HeliactylModule = {
   name: "Roles",
-  version: "10.0.0",
+  version: "10.0.1",
   api_level: 4,
   target_platform: "10.0.0",
   description: "Custom roles and fine-grained permissions management",

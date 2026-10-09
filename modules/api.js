@@ -45,7 +45,7 @@ function getPublicSettings() {
 
 const HeliactylModule = {
   "name": "API v5",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "api_level": 4,
   "target_platform": "10.0.0",
   "description": "Core module",
@@ -54,6 +54,13 @@ const HeliactylModule = {
     "email": "me@ether.pizza",
     "url": "https://ether.pizza"
   },
+  "contributors": [
+    {
+      "name": "aachul123",
+      "email": "ludo@overnode.fr",
+      "url": "https://achul123.pages.dev/"
+    }
+  ],
   "dependencies": [],
   "permissions": [],
   "routes": [],

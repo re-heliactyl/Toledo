@@ -20,15 +20,15 @@ const pteroClientApi = axios.create({
 
 const HeliactylModule = {
     name: "Server -> Subdomains",
-    version: "1.0.0",
+    version: "1.0.1",
     api_level: 4,
     target_platform: "10.0.0",
     description: "Cloudflare DNS subdomain management for game servers",
     author: {
-        "name": "aachul123",
-        "email": "ludo@overnode.fr",
-        "url": "https://achul123.pages.dev/"
-    },
+    name: "aachul123",
+    email: "ludo@overnode.fr",
+    url: "https://achul123.pages.dev/"
+  },
     dependencies: [],
     permissions: [],
     routes: [],

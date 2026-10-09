@@ -30,7 +30,7 @@ function respondWithUpstreamError(res, error, fallbackMessage) {
 /* --------------------------------------------- */
 const HeliactylModule = {
   "name": "Server -> Variables",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "api_level": 4,
   "target_platform": "10.0.0",
   "description": "Core module",
@@ -39,6 +39,13 @@ const HeliactylModule = {
     "email": "me@ether.pizza",
     "url": "https://ether.pizza"
   },
+  "contributors": [
+    {
+      "name": "aachul123",
+      "email": "ludo@overnode.fr",
+      "url": "https://achul123.pages.dev/"
+    }
+  ],
   "dependencies": [{ "name": "server/core", "optional": false }],
   "permissions": [],
   "routes": [],

@@ -17,7 +17,7 @@ const pteroApi = axios.create({
 
 const HeliactylModule = {
   "name": "Eggs",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "api_level": 4,
   "target_platform": "10.0.0",
   "description": "Dynamic egg management with Pterodactyl sync",
