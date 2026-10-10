@@ -82,7 +82,8 @@ function createAuthz(db) {
       requestPath === '/favicon.ico' ||
       requestPath === '/api/user/logout' ||
       requestPath === '/api/v5/state' ||
-      requestPath === '/api/v5/settings'
+      requestPath === '/api/v5/settings' ||
+      requestPath.startsWith('/api/v5/app')
     ) {
       return true;
     }
