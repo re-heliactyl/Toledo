@@ -287,7 +287,9 @@ const schemas = {
     dockerImage: z.string().trim().optional(),
     startup: z.string().trim().optional(),
     environment: z.record(z.string()).optional(),
-    enabled: z.boolean().optional()
+    enabled: z.boolean().optional(),
+    goldOnly: z.boolean().optional(),
+    nodeId: z.string().trim().nullable().optional()
   }),
 
   eggBatch: z.object({

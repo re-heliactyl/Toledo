@@ -189,6 +189,8 @@ module.exports.load = async function (app, db) {
                                 name: egg.displayName || egg.originalName,
                                 description: egg.description || '',
                                 category: egg.category || 'other',
+                                goldOnly: Boolean(egg.goldOnly),
+                                nodeId: egg.nodeId || null,
                                 minimum: {
                                     ram: egg.minimum?.ram || 0,
                                     disk: egg.minimum?.disk || 0,
@@ -500,6 +502,29 @@ module.exports.load = async function (app, db) {
                         const dbEgg = dbEggs[egg];
                         if (!dbEgg.enabled) {
                             return res.status(400).json({ error: 'This egg is not available' });
+                        }
+
+                        if (dbEgg.goldOnly) {
+                            const hasGodPack = await db.userPack.findFirst({
+                                where: {
+                                    userId: sessionUser.id,
+                                    type: 'god_pack',
+                                    status: 'active',
+                                    expiresAt: { gt: new Date() }
+                                }
+                            });
+
+                            if (!hasGodPack) {
+                                return res.status(403).json({
+                                    error: 'This software is reserved for God Pack subscribers only'
+                                });
+                            }
+                        }
+
+                        if (dbEgg.nodeId && String(dbEgg.nodeId) !== String(nodeId)) {
+                            return res.status(400).json({
+                                error: 'This software is not available on the selected node'
+                            });
                         }
                         eggInfo = {
                             minimum: dbEgg.minimum,

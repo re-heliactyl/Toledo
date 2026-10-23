@@ -54,7 +54,7 @@ function getBundleConfig() {
 const BUNDLE_PRODUCTS = {
   auto_renew: { name: 'Auto Renew', description: 'Automatic server renewal for 30 days' },
   upgraded_pack: { name: 'Upgraded Pack', description: '1.5x AFK coins and resource limits for 30 days' },
-  god_pack: { name: 'God Pack', description: 'Everything in Auto Renew + Upgraded Pack + Discord role + priority support + exclusive 20x high-performance dedicated nodes & network + Overnode App customization' }
+  god_pack: { name: 'God Pack', description: 'Everything in Auto Renew + Upgraded Pack + exclusive custom games (FiveM, PocketMine-MP, GMod, etc.) + dedicated high-performance nodes & network + Discord role + priority support + Overnode App customization' }
 };
 
 class BundleError extends Error {

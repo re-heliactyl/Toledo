@@ -61,6 +61,8 @@ async function getEggsFromDB(db) {
       startup: row.startup,
       environment: JSON.parse(row.environment),
       enabled: row.enabled,
+      goldOnly: Boolean(row.goldOnly),
+      nodeId: row.nodeId || null,
       category: row.categoryId || 'other',
       minimum: JSON.parse(row.minimum),
       maximum: row.maximum ? JSON.parse(row.maximum) : null,
@@ -155,6 +157,8 @@ module.exports.load = async function (app, db) {
           name: egg.displayName || egg.originalName,
           description: egg.description || '',
           category: egg.category || 'other',
+          goldOnly: Boolean(egg.goldOnly),
+          nodeId: egg.nodeId || null,
           minimum: {
             ram: egg.minimum?.ram || 0,
             disk: egg.minimum?.disk || 0,
@@ -309,6 +313,8 @@ module.exports.load = async function (app, db) {
 
               // Configuration (preserve existing or set defaults)
               enabled: existingEgg?.enabled ?? false,
+              goldOnly: existingEgg?.goldOnly ?? false,
+              nodeId: existingEgg?.nodeId || null,
               displayName: existingEgg?.displayName || egg.attributes.name,
               category: finalCategory,
               minimum: existingEgg?.minimum || { ram: 512, disk: 1024, cpu: 50 },
@@ -345,6 +351,8 @@ module.exports.load = async function (app, db) {
               startup: egg.startup,
               environment: JSON.stringify(egg.environment || {}),
               enabled: egg.enabled ?? false,
+              goldOnly: egg.goldOnly ?? false,
+              nodeId: egg.nodeId || null,
               categoryId: egg.category,
               minimum: JSON.stringify(egg.minimum || {}),
               maximum: egg.maximum ? JSON.stringify(egg.maximum) : '{}',
@@ -365,6 +373,8 @@ module.exports.load = async function (app, db) {
               startup: egg.startup,
               environment: JSON.stringify(egg.environment || {}),
               enabled: egg.enabled ?? false,
+              goldOnly: egg.goldOnly ?? false,
+              nodeId: egg.nodeId || null,
               categoryId: egg.category,
               minimum: JSON.stringify(egg.minimum || {}),
               maximum: egg.maximum ? JSON.stringify(egg.maximum) : '{}',
@@ -419,7 +429,7 @@ module.exports.load = async function (app, db) {
       }
 
       const allowedFields = [
-        'enabled', 'displayName', 'category', 'minimum', 'maximum',
+        'enabled', 'goldOnly', 'nodeId', 'displayName', 'category', 'minimum', 'maximum',
         'packages', 'featureLimits', 'order', 'dockerImage', 'startup', 'environment'
       ];
 
@@ -436,6 +446,8 @@ module.exports.load = async function (app, db) {
         where: { id: eggId },
         data: {
           enabled: eggData.enabled,
+          goldOnly: Boolean(eggData.goldOnly),
+          nodeId: eggData.nodeId ? String(eggData.nodeId) : null,
           displayName: eggData.displayName,
           categoryId: eggData.category,
           minimum: JSON.stringify(eggData.minimum || {}),
@@ -501,6 +513,37 @@ module.exports.load = async function (app, db) {
     } catch (error) {
       console.error('Error toggling egg:', error);
       res.status(500).json({ error: 'Failed to toggle egg' });
+    }
+  });
+
+  /**
+   * PATCH /api/admin/eggs/:id/toggle-gold
+   * Toggle egg goldOnly (God Pack only) status
+   */
+  router.patch('/admin/eggs/:id/toggle-gold', async (req, res) => {
+    if (!await checkAdminStatus(req, res, db)) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const eggId = req.params.id;
+      const existing = await db.eggConfig.findUnique({ where: { id: eggId } });
+
+      if (!existing) {
+        return res.status(404).json({ error: 'Egg not found' });
+      }
+
+      const egg = await db.eggConfig.update({
+        where: { id: eggId },
+        data: { goldOnly: !existing.goldOnly }
+      });
+
+      log('egg_gold_only_toggled', `${req.session.userinfo.username} set Gold Only to ${egg.goldOnly} on egg "${egg.displayName || egg.originalName}"`);
+
+      res.json({ success: true, goldOnly: egg.goldOnly, enabled: egg.enabled });
+    } catch (error) {
+      console.error('Error toggling egg gold only status:', error);
+      res.status(500).json({ error: 'Failed to toggle egg gold only status' });
     }
   });
 

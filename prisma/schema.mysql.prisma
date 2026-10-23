@@ -318,6 +318,8 @@ model EggConfig {
   startup           String   @db.LongText
   environment       String   @default("{}") @db.LongText
   enabled           Boolean  @default(true)
+  goldOnly          Boolean  @default(false)
+  nodeId            String?
   categoryId        String?
   minimum           String   @default("{}") @db.LongText
   maximum           String   @default("{}") @db.LongText
@@ -330,6 +332,7 @@ model EggConfig {
 
   @@index([enabled])
   @@index([categoryId])
+  @@index([nodeId])
 }
 
 model EggCategory {

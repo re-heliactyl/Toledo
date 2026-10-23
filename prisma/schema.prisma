@@ -340,6 +340,8 @@ model EggConfig {
   startup           String
   environment       String  @default("{}") // JSON object
   enabled           Boolean @default(true)
+  goldOnly          Boolean @default(false)
+  nodeId            String?
   categoryId        String?
   minimum           String  @default("{}") // JSON {ram,disk,cpu}
   maximum           String  @default("{}") // JSON {ram,disk,cpu}
@@ -352,6 +354,7 @@ model EggConfig {
 
   @@index([enabled])
   @@index([categoryId])
+  @@index([nodeId])
 }
 
 model EggCategory {
