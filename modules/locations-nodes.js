@@ -20,7 +20,7 @@ const LAST_SYNC_KEY = 'locations-nodes-last-sync';
 
 const HeliactylModule = {
   name: 'Locations & Nodes',
-  version: '1.1.0',
+  version: '1.1.1',
   api_level: 4,
   target_platform: '10.0.0',
   description: 'Dynamic location and node management with Pterodactyl sync',
@@ -52,6 +52,9 @@ function safeJsonParse(value, fallback) {
 
 async function checkAdminStatus(req, res, db, requiredPerm = 'admin.nodes.view') {
   const authz = createAuthz(db);
+  if (requiredPerm === 'admin.nodes.edit') {
+    return (await authz.hasPermission(req, 'admin.nodes.edit')) || (await authz.hasPermission(req, 'admin.nodes.manage'));
+  }
   return authz.hasPermission(req, requiredPerm);
 }
 
@@ -289,7 +292,7 @@ module.exports.load = async function (app, db) {
   });
 
   router.post('/admin/locations-nodes/sync', async (req, res) => {
-    if (!await checkAdminStatus(req, res, db)) {
+    if (!await checkAdminStatus(req, res, db, 'admin.nodes.manage')) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
@@ -312,7 +315,7 @@ module.exports.load = async function (app, db) {
   });
 
   router.patch('/admin/locations/:id', validate(schemas.locationConfigUpdate), async (req, res) => {
-    if (!await checkAdminStatus(req, res, db)) {
+    if (!await checkAdminStatus(req, res, db, 'admin.nodes.edit')) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
@@ -361,7 +364,7 @@ module.exports.load = async function (app, db) {
   });
 
   router.patch('/admin/locations/:id/toggle', async (req, res) => {
-    if (!await checkAdminStatus(req, res, db)) {
+    if (!await checkAdminStatus(req, res, db, 'admin.nodes.edit')) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
@@ -386,7 +389,7 @@ module.exports.load = async function (app, db) {
   });
 
   router.patch('/admin/nodes/:id', validate(schemas.nodeConfigUpdate), async (req, res) => {
-    if (!await checkAdminStatus(req, res, db)) {
+    if (!await checkAdminStatus(req, res, db, 'admin.nodes.edit')) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
@@ -417,7 +420,7 @@ module.exports.load = async function (app, db) {
   });
 
   router.patch('/admin/nodes/:id/toggle', async (req, res) => {
-    if (!await checkAdminStatus(req, res, db)) {
+    if (!await checkAdminStatus(req, res, db, 'admin.nodes.edit')) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
@@ -442,7 +445,7 @@ module.exports.load = async function (app, db) {
   });
 
   router.patch('/admin/nodes/:id/toggle-gold', async (req, res) => {
-    if (!await checkAdminStatus(req, res, db)) {
+    if (!await checkAdminStatus(req, res, db, 'admin.nodes.edit')) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 

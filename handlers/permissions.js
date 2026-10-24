@@ -38,6 +38,7 @@ const PERMISSION_CATEGORIES = {
     permissions: [
       { key: 'admin.nodes.view', name: 'View Nodes', description: 'View nodes and locations' },
       { key: 'admin.nodes.manage', name: 'Manage Nodes', description: 'Sync and edit nodes and locations' },
+      { key: 'admin.nodes.edit', name: 'Edit Nodes', description: 'Edit node configurations and toggle status' },
     ]
   },
   eggs: {
