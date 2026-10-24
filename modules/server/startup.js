@@ -4,7 +4,7 @@
 
 const express = require("express");
 const axios = require("axios");
-const { isAuthenticated, ownsServer, PANEL_URL, API_KEY, ADMIN_KEY } = require("./core.js");
+const { isAuthenticated, isServerOwner, PANEL_URL, API_KEY, ADMIN_KEY } = require("./core.js");
 const { validate, schemas } = require('../../handlers/validate');
 const { recordServerActivity } = require('../../handlers/activityLog');
 
@@ -13,7 +13,7 @@ const { recordServerActivity } = require('../../handlers/activityLog');
 /* --------------------------------------------- */
 const HeliactylModule = {
   "name": "Server -> Startup",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "api_level": 4,
   "target_platform": "10.0.0",
   "description": "Core module",
@@ -43,10 +43,10 @@ module.exports.load = async function (app, db) {
   const router = express.Router();
 
   // PUT /api/server/:id/startup - Update startup configuration
-  router.put('/server/:serverId/startup', isAuthenticated, ownsServer, validate(schemas.serverStartup), async (req, res) => {
+  router.put('/server/:serverId/startup', isAuthenticated, isServerOwner, validate(schemas.serverStartup), async (req, res) => {
     try {
       let serverId = req.params.serverId;
-      const { startup, environment, egg, image, skip_scripts } = req.body;
+      const { environment, skip_scripts } = req.body;
 
       // Resolve UUID to internal ID if needed
       if (!/^\d+$/.test(String(serverId))) {
@@ -84,10 +84,10 @@ module.exports.load = async function (app, db) {
 
       // Prepare the update payload
       const updatePayload = {
-        startup: startup || currentServerDetails.container.startup_command,
+        startup: currentServerDetails.container.startup_command,
         environment: environment || currentServerDetails.container.environment,
-        egg: egg || currentServerDetails.egg,
-        image: image || currentServerDetails.container.image,
+        egg: currentServerDetails.egg,
+        image: currentServerDetails.container.image,
         skip_scripts: skip_scripts !== undefined ? skip_scripts : false,
       };
 
@@ -105,9 +105,6 @@ module.exports.load = async function (app, db) {
       );
 
       await recordServerActivity(db, req, serverId, 'settings.startup', {
-        startup: updatePayload.startup,
-        egg: updatePayload.egg,
-        image: updatePayload.image,
         skip_scripts: updatePayload.skip_scripts,
         environmentKeys: Object.keys(updatePayload.environment || {}),
       });

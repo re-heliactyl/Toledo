@@ -609,10 +609,7 @@ const schemas = {
 
   // Server startup configuration
   serverStartup: z.object({
-    startup: z.string().trim().optional(),
     environment: z.record(z.string()).optional(),
-    egg: z.number().int().positive().optional(),
-    image: z.string().trim().optional(),
     skip_scripts: z.boolean().optional()
   }),
 
