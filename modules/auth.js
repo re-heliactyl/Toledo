@@ -33,7 +33,7 @@ const pteroApi = axios.create({
 
 const HeliactylModule = {
   "name": "Authentication",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "api_level": 4,
   "target_platform": "10.0.0",
   "description": "Core module",
@@ -163,6 +163,7 @@ module.exports.load = async function (app, db) {
         email: true,
         discordId: true,
         pterodactylId: true,
+        twoFactorEnabled: true,
         isBanned: true,
         banReason: true,
         bannedAt: true,
@@ -182,6 +183,7 @@ module.exports.load = async function (app, db) {
         password: true,
         discordId: true,
         pterodactylId: true,
+        twoFactorEnabled: true,
         isBanned: true,
         banReason: true,
         bannedAt: true,
@@ -208,42 +210,6 @@ module.exports.load = async function (app, db) {
       throw new Error('Failed to send email');
     }
   };
-
-  // Modify login process to check for 2FA
-  // This middleware should be added to your auth routes
-  app.use((req, res, next) => {
-    // Store the original login completion function
-    const originalLogin = req.login;
-
-    // Override the login function
-    req.login = async function (user, options, done) {
-      try {
-        // Check if user has 2FA enabled
-        const userData = await db.user.findUnique({
-          where: { id: user.id },
-          select: { twoFactorEnabled: true }
-        });
-
-        if (userData?.twoFactorEnabled) {
-          // Set a flag in session that 2FA is required
-          req.session.twoFactorPending = true;
-          req.session.twoFactorUserId = user.id;
-
-          // Don't complete login yet
-          if (done) done(null);
-          return;
-        }
-
-        // No 2FA required, proceed with normal login
-        return originalLogin.call(this, user, options, done);
-      } catch (error) {
-        console.error('Error in 2FA check:', error);
-        if (done) done(error);
-      }
-    };
-
-    next();
-  });
 
   // Registration route
   app.post("/auth/register", registerRateLimit, validate(schemas.authRegister), async (req, res) => {
@@ -333,6 +299,14 @@ module.exports.load = async function (app, db) {
         const bannedUser = await getBanAwareUser(user.id);
         return authz.denyBannedRequest(req, res, bannedUser, { forceJson: true });
       }
+    }
+
+    if (user.twoFactorEnabled) {
+      req.session.twoFactorPending = true;
+      req.session.twoFactorUserId = user.id;
+      req.session.sessionIp = clientIp;
+      req.session.userAgent = req.headers["user-agent"] || "";
+      return res.json({ requires2FA: true, twoFactorPending: true });
     }
 
     // Create session
@@ -578,6 +552,14 @@ module.exports.load = async function (app, db) {
         const bannedUser = await getBanAwareUser(user.id);
         return authz.denyBannedRequest(req, res, bannedUser);
       }
+    }
+
+    if (user.twoFactorEnabled) {
+      req.session.twoFactorPending = true;
+      req.session.twoFactorUserId = user.id;
+      req.session.sessionIp = clientIp;
+      req.session.userAgent = req.headers["user-agent"] || "";
+      return res.redirect("/auth/2fa");
     }
 
     // Create session
