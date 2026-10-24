@@ -1,3 +1,4 @@
+const express = require('express');
 const loadConfig = require("../handlers/config.js");
 const settings = loadConfig("./config.toml");
 const log = require("../handlers/log.js");
@@ -7,7 +8,7 @@ const Stripe = require('stripe');
 
 const HeliactylModule = {
   "name": "Bundles",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "api_level": 4,
   "target_platform": "10.0.0",
   "description": "Bundle subscriptions (Auto Renew, Upgraded Pack, God Pack)",
@@ -719,10 +720,21 @@ module.exports.load = function (app, db) {
     }
   });
 
-  app.post('/api/bundles/stripe-webhook', async (req, res) => {
+  app.post('/api/bundles/stripe-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
     try {
       const whSecret = settings?.api?.client?.stripe?.webhook_secret;
-      const event = whSecret ? getStripe().webhooks.constructEvent(req.body, req.headers['stripe-signature'], whSecret) : req.body;
+      if (!whSecret || typeof whSecret !== 'string' || whSecret.trim() === '') {
+        console.error('[BUNDLES] Stripe webhook rejected: webhook_secret is not configured');
+        return res.status(400).json({ error: 'Webhook secret is not configured' });
+      }
+
+      const sig = req.headers['stripe-signature'];
+      if (!sig) {
+        return res.status(400).json({ error: 'Missing stripe-signature header' });
+      }
+
+      const payload = req.rawBody || req.body;
+      const event = getStripe().webhooks.constructEvent(payload, sig, whSecret);
       await mgr.handleWebhookEvent(event);
       res.json({ received: true });
     } catch (e) { console.error('[BUNDLES] Webhook error:', e.message); res.status(400).json({ error: e.message }); }
