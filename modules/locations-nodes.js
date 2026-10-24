@@ -20,7 +20,7 @@ const LAST_SYNC_KEY = 'locations-nodes-last-sync';
 
 const HeliactylModule = {
   name: 'Locations & Nodes',
-  version: '1.1.1',
+  version: '1.1.2',
   api_level: 4,
   target_platform: '10.0.0',
   description: 'Dynamic location and node management with Pterodactyl sync',
@@ -39,6 +39,7 @@ const HeliactylModule = {
 };
 
 module.exports.HeliactylModule = HeliactylModule;
+module.exports.checkAdminStatus = checkAdminStatus;
 
 function safeJsonParse(value, fallback) {
   if (!value) return fallback;
@@ -54,6 +55,13 @@ async function checkAdminStatus(req, res, db, requiredPerm = 'admin.nodes.view')
   const authz = createAuthz(db);
   if (requiredPerm === 'admin.nodes.edit') {
     return (await authz.hasPermission(req, 'admin.nodes.edit')) || (await authz.hasPermission(req, 'admin.nodes.manage'));
+  }
+  if (requiredPerm === 'admin.nodes.view') {
+    return (
+      (await authz.hasPermission(req, 'admin.nodes.view')) ||
+      (await authz.hasPermission(req, 'admin.nodes.edit')) ||
+      (await authz.hasPermission(req, 'admin.nodes.manage'))
+    );
   }
   return authz.hasPermission(req, requiredPerm);
 }
