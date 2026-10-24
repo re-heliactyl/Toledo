@@ -5,6 +5,7 @@ const path = require("path");
 const https = require("https");
 const { exec } = require("child_process");
 const { promisify } = require("util");
+const crypto = require("crypto");
 const execAsync = promisify(exec);
 const loadConfig = require("../handlers/config.js");
 const createLogger = require("../handlers/console.js");
@@ -21,7 +22,7 @@ async function checkAdminStatus(req, res, db, requiredPerm = 'admin.updater.mana
 
 const HeliactylModule = {
   name: "Updater",
-  version: "1.2.0",
+  version: "1.2.1",
   api_level: 4,
   target_platform: "10.0.0",
   description: "Auto-update system - DB-based config, admin UI, release checking & automated updates",
@@ -248,8 +249,24 @@ class UpdateManager {
 
     app.post("/api/webhooks/github", async (req, res) => {
       const config = await this.getConfig();
-      if (config.webhookSecret && req.query.secret !== config.webhookSecret) {
-        return res.status(403).json({ error: "Invalid secret" });
+      if (!config.webhookSecret || typeof config.webhookSecret !== "string" || config.webhookSecret.trim() === "") {
+        return res.status(403).json({ error: "Webhook secret not configured" });
+      }
+
+      const signatureHeader = req.headers["x-hub-signature-256"];
+      if (!signatureHeader || typeof signatureHeader !== "string" || !signatureHeader.startsWith("sha256=")) {
+        return res.status(401).json({ error: "Missing or invalid signature header" });
+      }
+
+      const rawBody = req.rawBody || (req.body ? (typeof req.body === "string" ? Buffer.from(req.body) : Buffer.from(JSON.stringify(req.body))) : Buffer.alloc(0));
+      const expectedHash = crypto.createHmac("sha256", config.webhookSecret).update(rawBody).digest("hex");
+      const receivedHash = signatureHeader.slice(7);
+
+      const expectedBuffer = Buffer.from(expectedHash, "utf8");
+      const receivedBuffer = Buffer.from(receivedHash, "utf8");
+
+      if (expectedBuffer.length !== receivedBuffer.length || !crypto.timingSafeEqual(expectedBuffer, receivedBuffer)) {
+        return res.status(403).json({ error: "Invalid webhook signature" });
       }
 
       const event = req.headers["x-github-event"];
