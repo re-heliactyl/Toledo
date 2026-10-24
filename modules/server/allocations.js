@@ -4,7 +4,7 @@
 
 const express = require("express");
 const axios = require("axios");
-const { isAuthenticated, ownsServer, PANEL_URL, API_KEY } = require("./core.js");
+const { isAuthenticated, ownsServer, isServerOwner, PANEL_URL, API_KEY } = require("./core.js");
 const { recordServerActivity } = require('../../handlers/activityLog');
 
 /* --------------------------------------------- */
@@ -12,7 +12,7 @@ const { recordServerActivity } = require('../../handlers/activityLog');
 /* --------------------------------------------- */
 const HeliactylModule = {
   "name": "Server -> Allocations",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "api_level": 4,
   "target_platform": "10.0.0",
   "description": "Core module",
@@ -21,6 +21,11 @@ const HeliactylModule = {
     "email": "me@ether.pizza",
     "url": "https://ether.pizza"
   },
+  "contributors": [{
+    "name": "aachul123",
+    "email": "ludo@overnode.fr",
+    "url": "https://achul123.pages.dev/"
+  }],
   "dependencies": [{ "name": "server/core", "optional": false }],
   "permissions": [],
   "routes": [],
@@ -70,7 +75,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Add new allocation
-  router.post('/server/:id/allocations', isAuthenticated, ownsServer, async (req, res) => {
+  router.post('/server/:id/allocations', isAuthenticated, isServerOwner, async (req, res) => {
     try {
       const serverId = req.params.id;
 
@@ -107,7 +112,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Remove allocation
-  router.delete('/server/:id/allocations/:allocationId', isAuthenticated, ownsServer, async (req, res) => {
+  router.delete('/server/:id/allocations/:allocationId', isAuthenticated, isServerOwner, async (req, res) => {
     try {
       const { id: serverId, allocationId } = req.params;
 
@@ -160,7 +165,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Set primary allocation
-  router.post('/server/:id/allocations/:allocationId/set-primary', isAuthenticated, ownsServer, async (req, res) => {
+  router.post('/server/:id/allocations/:allocationId/set-primary', isAuthenticated, isServerOwner, async (req, res) => {
     try {
       const { id: serverId, allocationId } = req.params;
 
@@ -190,7 +195,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Update allocation alias (notes)
-  router.post('/server/:id/allocations/:allocationId/alias', isAuthenticated, ownsServer, async (req, res) => {
+  router.post('/server/:id/allocations/:allocationId/alias', isAuthenticated, isServerOwner, async (req, res) => {
     try {
       const { id: serverId, allocationId } = req.params;
       const { alias } = req.body;

@@ -4,13 +4,13 @@ const settings = loadConfig("./config.toml");
 const WebSocket = require('ws');
 const axios = require('axios');
 const { validate, schemas } = require('../../handlers/validate');
-const { isAuthenticated, ownsServer } = require('./core');
+const { isAuthenticated, ownsServer, isServerOwner } = require('./core');
 const { recordServerActivity } = require('../../handlers/activityLog');
 
 /* Ensure platform release target is met */
 const HeliactylModule = {
     "name": "Server -> Settings",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "api_level": 4,
     "target_platform": "10.0.0",
     "description": "Core module",
@@ -19,6 +19,11 @@ const HeliactylModule = {
     "email": "me@ether.pizza",
     "url": "https://ether.pizza"
   },
+  "contributors": [{
+    "name": "aachul123",
+    "email": "ludo@overnode.fr",
+    "url": "https://achul123.pages.dev/"
+  }],
     "dependencies": [],
     "permissions": [],
     "routes": [],
@@ -34,7 +39,7 @@ module.exports.load = async function (app, db) {
     const router = express.Router();
 
     // POST Reinstall server
-    router.post('/server/:id/reinstall', isAuthenticated, ownsServer, async (req, res) => {
+    router.post('/server/:id/reinstall', isAuthenticated, isServerOwner, async (req, res) => {
         try {
             const serverId = req.params.id;
             await axios.post(`${settings.pterodactyl.domain}/api/client/servers/${serverId}/settings/reinstall`, {}, {

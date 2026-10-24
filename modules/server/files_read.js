@@ -4,14 +4,14 @@
 
 const express = require("express");
 const axios = require("axios");
-const { isAuthenticated, ownsServer, PANEL_URL, API_KEY } = require("./core.js");
+const { isAuthenticated, ownsServer, requireServerPermission, PANEL_URL, API_KEY } = require("./core.js");
 
 /* --------------------------------------------- */
 /* Heliactyl Next Module                                  */
 /* --------------------------------------------- */
 const HeliactylModule = {
   "name": "Server -> Files Read",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "api_level": 4,
   "target_platform": "10.0.0",
   "description": "Core module",
@@ -41,7 +41,7 @@ module.exports.load = async function (app, db) {
   const router = express.Router();
 
   // GET /api/server/:id/files/contents
-  router.get("/server/:id/files/contents", isAuthenticated, ownsServer, async (req, res) => {
+  router.get("/server/:id/files/contents", isAuthenticated, requireServerPermission("file.read"), async (req, res) => {
     try {
       const serverId = req.params.id;
       let file = String(req.query.file || "").trim();
@@ -81,7 +81,7 @@ module.exports.load = async function (app, db) {
   });
 
   // GET /api/server/:id/files/download
-  router.get("/server/:id/files/download", isAuthenticated, ownsServer, async (req, res) => {
+  router.get("/server/:id/files/download", isAuthenticated, requireServerPermission("file.read"), async (req, res) => {
     try {
       const serverId = req.params.id;
       let file = String(req.query.file || "").trim().replace(/\/+/g, '/').replace(/\/+$/, '');

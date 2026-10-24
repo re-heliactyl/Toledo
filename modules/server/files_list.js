@@ -4,7 +4,7 @@
 
 const express = require("express");
 const axios = require("axios");
-const { isAuthenticated, ownsServer, PANEL_URL, API_KEY } = require("./core.js");
+const { isAuthenticated, ownsServer, requireServerPermission, PANEL_URL, API_KEY } = require("./core.js");
 const cache = require("../../handlers/cache");
 
 const FOLDER_SIZE_CACHE_TTL = 120;
@@ -93,7 +93,7 @@ async function computeFolderSize(serverId, directory, visited = new Set(), optio
 /* --------------------------------------------- */
 const HeliactylModule = {
   "name": "Server -> Files List",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "api_level": 4,
   "target_platform": "10.0.0",
   "description": "Core module",
@@ -116,7 +116,7 @@ module.exports.load = async function (app, db) {
   const router = express.Router();
 
   // GET /api/server/:id/files/list
-  router.get("/server/:id/files/list", isAuthenticated, ownsServer, async (req, res) => {
+  router.get("/server/:id/files/list", isAuthenticated, requireServerPermission("file.read"), async (req, res) => {
     try {
       const serverId = req.params.id;
       const directory = req.query.directory || "/";
@@ -163,7 +163,7 @@ module.exports.load = async function (app, db) {
     }
   });
 
-  router.get("/server/:id/files/folder-size", isAuthenticated, ownsServer, async (req, res) => {
+  router.get("/server/:id/files/folder-size", isAuthenticated, requireServerPermission("file.read"), async (req, res) => {
     try {
       const serverId = req.params.id;
       const directory = normalizeDirectoryPath(req.query.directory || "/");

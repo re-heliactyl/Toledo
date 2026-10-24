@@ -4,7 +4,7 @@
 
 const express = require("express");
 const axios = require("axios");
-const { isAuthenticated, ownsServer, PANEL_URL, API_KEY } = require("./core.js");
+const { isAuthenticated, ownsServer, requireServerPermission, PANEL_URL, API_KEY } = require("./core.js");
 const { validate, schemas } = require('../../handlers/validate');
 const cache = require('../../handlers/cache');
 const { recordServerActivity } = require('../../handlers/activityLog');
@@ -18,7 +18,7 @@ async function invalidateFolderSizeCache(serverId) {
 /* --------------------------------------------- */
 const HeliactylModule = {
   "name": "Server -> Files Delete",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "api_level": 4,
   "target_platform": "10.0.0",
   "description": "Core module",
@@ -27,6 +27,11 @@ const HeliactylModule = {
     "email": "me@ether.pizza",
     "url": "https://ether.pizza"
   },
+  "contributors": [{
+    "name": "aachul123",
+    "email": "ludo@overnode.fr",
+    "url": "https://achul123.pages.dev/"
+  }],
   "dependencies": [{ "name": "server/core", "optional": false }],
   "permissions": [],
   "routes": [],
@@ -40,7 +45,7 @@ module.exports.load = async function (app, db) {
   const router = express.Router();
 
   // POST /api/server/:id/files/delete
-  router.post("/server/:id/files/delete", isAuthenticated, ownsServer, validate(schemas.fileDelete), async (req, res) => {
+  router.post("/server/:id/files/delete", isAuthenticated, requireServerPermission("file.delete"), validate(schemas.fileDelete), async (req, res) => {
     try {
       const serverId = req.params.id;
       const { root, files } = req.body;
@@ -70,7 +75,7 @@ module.exports.load = async function (app, db) {
   });
 
   // POST /api/server/:id/files/compress
-  router.post("/server/:id/files/compress", isAuthenticated, ownsServer, validate(schemas.fileCompress), async (req, res) => {
+  router.post("/server/:id/files/compress", isAuthenticated, requireServerPermission(["file.archive", "file.create"]), validate(schemas.fileCompress), async (req, res) => {
     try {
       const serverId = req.params.id;
       const { root, files } = req.body;
@@ -100,7 +105,7 @@ module.exports.load = async function (app, db) {
   });
 
   // POST /api/server/:id/files/decompress
-  router.post("/server/:id/files/decompress", isAuthenticated, ownsServer, validate(schemas.fileDecompress), async (req, res) => {
+  router.post("/server/:id/files/decompress", isAuthenticated, requireServerPermission(["file.archive", "file.create"]), validate(schemas.fileDecompress), async (req, res) => {
     try {
       const serverId = req.params.id;
       const { root, file } = req.body;

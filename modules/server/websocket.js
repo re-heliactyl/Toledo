@@ -4,7 +4,7 @@
 
 const express = require("express");
 const axios = require("axios");
-const { isAuthenticated, ownsServer, PANEL_URL, API_KEY } = require("./core.js");
+const { isAuthenticated, ownsServer, requireServerPermission, PANEL_URL, API_KEY } = require("./core.js");
 const { fetchWebSocketCredentials } = require("./websocketCredentials.js");
 const { applySftpIpMode, getSftpIpMode } = require("../../handlers/sftp");
 
@@ -13,7 +13,7 @@ const { applySftpIpMode, getSftpIpMode } = require("../../handlers/sftp");
 /* --------------------------------------------- */
 const HeliactylModule = {
   "name": "Server -> WebSocket",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "api_level": 4,
   "target_platform": "10.0.0",
   "description": "Core module",
@@ -43,7 +43,7 @@ module.exports.load = async function (app, db) {
   const router = express.Router();
 
   // GET /api/server/:id/websocket - Get WebSocket credentials
-  router.get("/server/:id/websocket", isAuthenticated, ownsServer, async (req, res) => {
+  router.get("/server/:id/websocket", isAuthenticated, requireServerPermission(["websocket.connect", "control.console"]), async (req, res) => {
     try {
       const serverId = req.params.id;
       const responseData = await fetchWebSocketCredentials({

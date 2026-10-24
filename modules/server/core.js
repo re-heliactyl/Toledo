@@ -33,7 +33,7 @@ const workflowsFilePath = path.join(__dirname, "../../storage/workflows.json");
 /* --------------------------------------------- */
 const HeliactylModule = {
   "name": "Server -> Core",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "api_level": 4,
   "target_platform": "10.0.0",
   "description": "Core module",
@@ -139,11 +139,78 @@ async function invalidateOwnershipCache(userIdOrPteroId) {
   }
 }
 
+// Fetch subusers for a server directly from Pterodactyl Client API
+async function fetchServerSubusers(serverId) {
+  const cacheKey = `server_subusers_${serverId}`;
+  let serverUsers = serverCache.get(cacheKey);
+  if (serverUsers) {
+    return serverUsers;
+  }
+
+  try {
+    let clientServerId = serverId;
+    if (/^\d+$/.test(String(serverId))) {
+      try {
+        const appServerRes = await axios.get(
+          `${PANEL_URL}/api/application/servers/${serverId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${ADMIN_KEY}`,
+              Accept: 'application/json',
+            },
+          }
+        );
+        if (appServerRes.data?.attributes?.identifier) {
+          clientServerId = appServerRes.data.attributes.identifier;
+        }
+      } catch (e) {
+        // Fallback to original serverId
+      }
+    }
+
+    const response = await axios.get(
+      `${PANEL_URL}/api/client/servers/${clientServerId}/users`,
+      {
+        headers: {
+          Authorization: `Bearer ${API_KEY}`,
+          Accept: 'application/json',
+        },
+      }
+    );
+    serverUsers = Array.isArray(response.data?.data) ? response.data.data : [];
+    serverCache.set(cacheKey, serverUsers);
+    return serverUsers;
+  } catch (error) {
+    console.error('Error fetching server subusers from Pterodactyl:', error.message);
+    return [];
+  }
+}
+
+// Match subuser against Pterodactyl server users and return permissions
+async function fetchSubuserPermissions(pteroUser, serverId) {
+  const subusers = await fetchServerSubusers(serverId);
+  const matched = subusers.find(u => {
+    const attr = u.attributes || {};
+    return (pteroUser.id && String(attr.id) === String(pteroUser.id))
+      || (pteroUser.uuid && attr.uuid && String(attr.uuid).toLowerCase() === String(pteroUser.uuid).toLowerCase())
+      || (pteroUser.username && attr.username && attr.username.toLowerCase() === pteroUser.username.toLowerCase())
+      || (pteroUser.email && attr.email && attr.email.toLowerCase() === pteroUser.email.toLowerCase());
+  });
+
+  if (matched) {
+    return {
+      isSubuser: true,
+      permissions: Array.isArray(matched.attributes?.permissions) ? matched.attributes.permissions : []
+    };
+  }
+  return { isSubuser: false, permissions: [] };
+}
+
 // Fixed enhancedOwnsServer middleware with fresh Pterodactyl data
 // Passes both server owners AND subusers (subusers can view/use the server)
 const ownsServer = async (req, res, next) => {
   try {
-    const serverId = req.params.id || req.params.serverId || req.params.instanceId || req.params.idOrIdentifier || req.query.id;
+    const serverId = req.params.id || req.params.serverId || req.params.instanceId || req.params.idOrIdentifier || req.query?.id;
     if (!serverId) {
       return res.status(400).json({ error: 'No server ID provided' });
     }
@@ -160,7 +227,6 @@ const ownsServer = async (req, res, next) => {
 
     const pteroUser = authzHandler.getPterodactylUser(req);
     const sessionUser = authzHandler.getSessionUser(req);
-
     const normalizedTargetId = normalizeId(serverId);
 
     // FIRST CHECK: Verify ownership via Pterodactyl Application API
@@ -169,10 +235,11 @@ const ownsServer = async (req, res, next) => {
       isOwner = await checkIsServerOwner(pteroUser, serverId);
     } catch (error) {
       console.error('Error fetching fresh server data from Pterodactyl:', error);
-      // Continue with other checks even if this one fails
     }
 
     if (isOwner) {
+      req.isOwner = true;
+      req.serverPermissions = ['*'];
       return next();
     }
 
@@ -180,96 +247,48 @@ const ownsServer = async (req, res, next) => {
     try {
       const forced = await db.subuserServer.findFirst({ where: { serverId, source: 'forced' } });
       if (forced && forced.userId === sessionUser.id) {
+        req.isOwner = true;
+        req.serverPermissions = ['*'];
         return next();
       }
     } catch (error) {
       console.error('Error checking force access:', error);
     }
 
-    // SECOND CHECK: Check if user is a subuser via pterodactyl username
+    // SUBUSER CHECK: Retrieve granular permissions from Pterodactyl
+    const subuserResult = await fetchSubuserPermissions(pteroUser, serverId);
+    if (subuserResult.isSubuser) {
+      req.isOwner = false;
+      req.serverPermissions = subuserResult.permissions;
+      return next();
+    }
+
+    // FALLBACK DATABASE CHECK: Check if registered in local db
+    let dbSubuser = false;
     try {
       const pteroUsername = pteroUser.username;
-      const results = await db.subuserServer.findMany({ where: { user: { pteroUsername }, source: 'subuser' } });
-      const subuserServers = results.map(s => ({ id: s.serverId, name: s.serverName, ownerId: s.ownerId }));
-
-      let hasAccess = subuserServers.some(server => {
-        const normalizedSubuserId = normalizeId(server?.id);
-        return normalizedSubuserId === normalizedTargetId;
-      });
-
-      if (hasAccess) {
-        return next();
-      }
-    } catch (error) {
-      console.error('Error checking subuser access by username:', error);
-    }
-
-    // THIRD CHECK: Check if user is a subuser via direct user ID
-    try {
       const userId = sessionUser.id;
-      const results = await db.subuserServer.findMany({ where: { userId, source: 'subuser' } });
-      const userServers = results.map(s => ({ id: s.serverId, name: s.serverName, ownerId: s.ownerId }));
-
-      let hasAccess = userServers.some(server => {
-        const normalizedSubuserId = normalizeId(server?.id);
-        return normalizedSubuserId === normalizedTargetId;
-      });
-
-      if (hasAccess) {
-        return next();
-      }
-    } catch (error) {
-      console.error('Error checking subuser access by user ID:', error);
-    }
-
-    // FOURTH CHECK: Direct check with Pterodactyl API for subuser permissions
-    try {
-      const cacheKey = `server_subusers_${serverId}`;
-      let serverUsers = serverCache.get(cacheKey);
-
-      if (!serverUsers) {
-        if (/^\d+$/.test(String(serverId))) {
-          const serverResponse = await axios.get(
-            `${PANEL_URL}/api/application/servers/${serverId}?include=users`,
-            {
-              headers: {
-                'Authorization': `Bearer ${ADMIN_KEY}`,
-                'Accept': 'application/json',
-              },
-            }
-          );
-          serverUsers = serverResponse.data.attributes.relationships.users.data;
-        } else {
-          const serverResponse = await axios.get(
-            `${PANEL_URL}/api/client/servers/${serverId}/users`,
-            {
-              headers: {
-                'Authorization': `Bearer ${API_KEY}`,
-                'Accept': 'application/json',
-              },
-            }
-          );
-          serverUsers = serverResponse.data.data;
+      const exists = await db.subuserServer.findFirst({
+        where: {
+          serverId,
+          source: 'subuser',
+          OR: [{ userId }, { user: { pteroUsername } }]
         }
-
-        serverCache.set(cacheKey, serverUsers);
-      }
-
-      // Check if user is a subuser on this server
-      const userIsSubuser = serverUsers.some(
-        user => String(user.attributes.id) === String(pteroUser.id)
-          || user.attributes.username === pteroUser.username
-          || user.attributes.email === pteroUser.email
-      );
-
-      if (userIsSubuser) {
-        return next();
+      });
+      if (exists) {
+        dbSubuser = true;
       }
     } catch (error) {
-      console.error('Error checking server subusers via API:', error);
+      console.error('Error checking subuser access in database:', error);
     }
 
-    // If we get here, user doesn't have access
+    if (dbSubuser) {
+      req.isOwner = false;
+      req.serverPermissions = subuserResult.permissions || [];
+      return next();
+    }
+
+    // User does not have access
     return res.status(403).json({ error: 'You do not have permission to access this server' });
   } catch (error) {
     console.error('Error in enhancedOwnsServer middleware:', error);
@@ -280,7 +299,7 @@ const ownsServer = async (req, res, next) => {
 // Middleware that only allows the actual server owner (rejects subusers)
 const isServerOwner = async (req, res, next) => {
   try {
-    const serverId = req.params.id || req.params.serverId || req.params.instanceId || req.params.idOrIdentifier || req.query.id;
+    const serverId = req.params.id || req.params.serverId || req.params.instanceId || req.params.idOrIdentifier || req.query?.id;
     if (!serverId) {
       return res.status(400).json({ error: 'No server ID provided' });
     }
@@ -310,6 +329,8 @@ const isServerOwner = async (req, res, next) => {
       return res.status(403).json({ error: 'Only the server owner can perform this action' });
     }
 
+    req.isOwner = true;
+    req.serverPermissions = ['*'];
     next();
   } catch (error) {
     console.error('Error in isServerOwner middleware:', error);
@@ -318,6 +339,43 @@ const isServerOwner = async (req, res, next) => {
 };
 
 
+
+// Middleware to require specific Pterodactyl permission(s) for a server
+const requireServerPermission = (requiredPermission) => {
+  return async (req, res, next) => {
+    const evaluate = () => {
+      if (req.isOwner) {
+        return next();
+      }
+
+      const perms = req.serverPermissions || [];
+      if (perms.includes('*') || perms.includes('admin')) {
+        return next();
+      }
+
+      const requiredList = Array.isArray(requiredPermission) ? requiredPermission : [requiredPermission];
+      const hasPerm = requiredList.some(p => perms.includes(p));
+
+      if (hasPerm) {
+        return next();
+      }
+
+      return res.status(403).json({
+        error: 'You do not have permission to perform this action',
+        required: requiredList
+      });
+    };
+
+    if (req.isOwner === undefined || req.serverPermissions === undefined) {
+      return ownsServer(req, res, (err) => {
+        if (err) return next(err);
+        evaluate();
+      });
+    }
+
+    evaluate();
+  };
+};
 
 // WebSocket helper function with retry
 async function withServerWebSocket(serverId, callback, retries = 2) {
@@ -483,6 +541,9 @@ module.exports = {
   isAuthenticated,
   ownsServer,
   isServerOwner,
+  requireServerPermission,
+  fetchServerSubusers,
+  fetchSubuserPermissions,
   checkIsServerOwner,
   invalidateOwnershipCache,
   invalidateServerAccessCache,

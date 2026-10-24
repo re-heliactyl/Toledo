@@ -4,7 +4,7 @@
 
 const express = require("express");
 const axios = require("axios");
-const { isAuthenticated, ownsServer, PANEL_URL, API_KEY } = require("./core.js");
+const { isAuthenticated, ownsServer, requireServerPermission, PANEL_URL, API_KEY } = require("./core.js");
 const { validate, schemas } = require('../../handlers/validate');
 const cache = require('../../handlers/cache');
 const { recordServerActivity } = require('../../handlers/activityLog');
@@ -18,7 +18,7 @@ async function invalidateFolderSizeCache(serverId) {
 /* --------------------------------------------- */
 const HeliactylModule = {
   "name": "Server -> Files Write",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "api_level": 4,
   "target_platform": "10.0.0",
   "description": "Core module",
@@ -48,7 +48,7 @@ module.exports.load = async function (app, db) {
   const router = express.Router();
 
   // POST /api/server/:id/files/write
-  router.post("/server/:id/files/write", isAuthenticated, ownsServer, express.text({ limit: "50mb", type: "*/*" }), async (req, res) => {
+  router.post("/server/:id/files/write", isAuthenticated, requireServerPermission(["file.create", "file.update"]), express.text({ limit: "50mb", type: "*/*" }), async (req, res) => {
     try {
       const serverId = req.params.id;
       let file = String(req.query.file || "").trim();
@@ -110,7 +110,7 @@ module.exports.load = async function (app, db) {
   });
 
   // POST /api/server/:id/files/create-folder
-  router.post("/server/:id/files/create-folder", isAuthenticated, ownsServer, validate(schemas.fileCreateFolder), async (req, res) => {
+  router.post("/server/:id/files/create-folder", isAuthenticated, requireServerPermission("file.create"), validate(schemas.fileCreateFolder), async (req, res) => {
     try {
       const serverId = req.params.id;
       const { root, name } = req.body;
@@ -140,7 +140,7 @@ module.exports.load = async function (app, db) {
   });
 
   // PUT /api/server/:id/files/rename
-  router.put("/server/:id/files/rename", isAuthenticated, ownsServer, validate(schemas.fileRename), async (req, res) => {
+  router.put("/server/:id/files/rename", isAuthenticated, requireServerPermission(["file.create", "file.update"]), validate(schemas.fileRename), async (req, res) => {
     try {
       const serverId = req.params.id;
       const { root, files } = req.body;
