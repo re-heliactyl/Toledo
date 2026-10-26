@@ -6,7 +6,7 @@ const createAuthz = require('../handlers/authz');
 
 const HeliactylModule = {
   "name": "Daily Rewards",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "api_level": 4,
   "target_platform": "10.0.0",
   "description": "Core module",
@@ -200,18 +200,35 @@ class DailyRewardsManager {
         }
       }
 
-      // Update user in transaction
-      const updatedUser = await this.db.user.update({
-        where: { id: userId },
+      const todayIso = new Date(today).toISOString();
+
+      // Atomically check that the reward has not already been claimed today
+      const claimResult = await this.db.user.updateMany({
+        where: {
+          id: userId,
+          OR: [
+            { lastClaimDate: null },
+            { lastClaimDate: { not: todayIso } }
+          ]
+        },
         data: {
           coins: { increment: totalReward },
           currentStreak: newStreak,
           longestStreak: Math.max(newStreak, streakInfo.longestStreak),
-          lastClaimDate: new Date(today).toISOString(),
+          lastClaimDate: todayIso,
           totalClaimed: { increment: 1 },
           totalCoinsEarned: { increment: totalReward },
           streakProtection: streakProtectionRemaining
         }
+      });
+
+      if (claimResult.count === 0) {
+        throw new DailyRewardsError('You already claimed your daily reward today', 'ALREADY_CLAIMED');
+      }
+
+      const updatedUser = await this.db.user.findUnique({
+        where: { id: userId },
+        select: { coins: true }
       });
 
       // Log the claim

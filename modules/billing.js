@@ -10,7 +10,7 @@ const InvoiceGenerator = require('./invoice');
 
 const HeliactylModule = {
   "name": "Billing",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "api_level": 4,
   "target_platform": "10.0.0",
   "description": "Core module",
@@ -476,14 +476,21 @@ module.exports.load = async function (app, db) {
 
       let transaction;
       await db.$transaction(async (tx) => {
-        // Deduct credit
-        await tx.user.update({
-          where: { id: userId },
+        // Atomically deduct credit only if user has sufficient balance
+        const updateResult = await tx.user.updateMany({
+          where: {
+            id: userId,
+            creditUsd: { gte: price }
+          },
           data: {
             creditUsd: { decrement: price },
             coins: { increment: pkg.amount }
           }
         });
+
+        if (updateResult.count === 0) {
+          throw new Error('INSUFFICIENT_CREDIT');
+        }
 
         // Log the credit spending
         await tx.transaction.create({
@@ -527,6 +534,9 @@ module.exports.load = async function (app, db) {
         new_coin_balance: await billingManager.getCoinBalance(userId)
       });
     } catch (error) {
+      if (error.message === 'INSUFFICIENT_CREDIT') {
+        return res.status(402).json({ error: 'Insufficient credit balance' });
+      }
       console.error('Error purchasing coins:', error);
       res.status(500).json({ error: 'Failed to purchase coins' });
     }
@@ -620,9 +630,47 @@ module.exports.load = async function (app, db) {
         return res.status(402).json({ error: 'Insufficient credit balance' });
       }
 
-      // Deduct credit and apply bundle
-      await billingManager.addCreditBalance(userId, -bundle.price_eur);
-      await billingManager.applyBundle(userId, bundle_id);
+      // Atomically deduct credit and apply bundle inside transaction
+      await db.$transaction(async (tx) => {
+        const updateResult = await tx.user.updateMany({
+          where: {
+            id: userId,
+            creditUsd: { gte: bundle.price_eur }
+          },
+          data: {
+            creditUsd: { decrement: bundle.price_eur },
+            extraRam: { increment: bundle.resources.ram || 0 },
+            extraDisk: { increment: bundle.resources.disk || 0 },
+            extraCpu: { increment: bundle.resources.cpu || 0 },
+            extraServers: { increment: bundle.resources.servers || 0 },
+            coins: { increment: bundle.resources.coins || 0 }
+          }
+        });
+
+        if (updateResult.count === 0) {
+          throw new Error('INSUFFICIENT_CREDIT');
+        }
+
+        await tx.transaction.create({
+          data: {
+            userId,
+            type: 'purchase',
+            amount: Math.round(bundle.price_eur * 100),
+            description: `Bundle ${bundle.name}`,
+            details: JSON.stringify({
+              bundle: bundle_id,
+              name: bundle.name,
+              price_eur: bundle.price_eur,
+              resources: bundle.resources,
+              currency: 'EUR',
+              payment_method: 'Internal Credit',
+              item_type: 'bundle',
+              quantity: 1,
+              unit_price: bundle.price_eur
+            })
+          }
+        });
+      });
 
       const user = await db.user.findUnique({
         where: { id: userId },
@@ -641,6 +689,9 @@ module.exports.load = async function (app, db) {
         new_coin_balance: await billingManager.getCoinBalance(userId)
       });
     } catch (error) {
+      if (error.message === 'INSUFFICIENT_CREDIT') {
+        return res.status(402).json({ error: 'Insufficient credit balance' });
+      }
       console.error('Error purchasing bundle:', error);
       res.status(500).json({ error: 'Failed to purchase bundle' });
     }

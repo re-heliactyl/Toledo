@@ -6,7 +6,7 @@ const createAuthz = require('../handlers/authz');
 
 const HeliactylModule = {
   "name": "Staking",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "api_level": 4,
   "target_platform": "10.0.0",
   "description": "Core module",
@@ -232,21 +232,32 @@ class StakingManager {
     }
 
     // Update status and balance in transaction
-    const [updatedUser, updatedStake] = await this.db.$transaction([
-      this.db.user.update({
-        where: { id: userId },
-        data: { coins: { increment: Math.floor(totalReward) } }
-      }),
-      this.db.stake.update({
-        where: { id: stakeId },
+    const { updatedUser, updatedStake } = await this.db.$transaction(async (tx) => {
+      const stakeUpdate = await tx.stake.updateMany({
+        where: { id: stakeId, status: 'active' },
         data: {
           status: 'completed',
           claimedAt: new Date(),
           returnedAmount: Math.floor(totalReward),
           penalty
         }
-      })
-    ]);
+      });
+
+      if (stakeUpdate.count === 0) {
+        throw new StakingError('Stake is not active', 'STAKE_NOT_ACTIVE');
+      }
+
+      const user = await tx.user.update({
+        where: { id: userId },
+        data: { coins: { increment: Math.floor(totalReward) } }
+      });
+
+      const completedStake = await tx.stake.findUnique({
+        where: { id: stakeId }
+      });
+
+      return { updatedUser: user, updatedStake: completedStake };
+    });
 
     // Log wallet transaction
     await this.logWalletTransaction(userId, 'stake_claim', `Claimed Stake (Reward: ${stake.accruedRewards.toFixed(2)})`, Math.floor(totalReward), {
