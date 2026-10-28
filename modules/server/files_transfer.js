@@ -4,7 +4,7 @@
 
 const express = require("express");
 const axios = require("axios");
-const { isAuthenticated, ownsServer, requireServerPermission, PANEL_URL, API_KEY } = require("./core.js");
+const { isAuthenticated, requireServerPermission, PANEL_URL, API_KEY } = require("./core.js");
 const { validate, schemas } = require('../../handlers/validate');
 const { recordServerActivity } = require('../../handlers/activityLog');
 
@@ -13,7 +13,7 @@ const { recordServerActivity } = require('../../handlers/activityLog');
 /* --------------------------------------------- */
 const HeliactylModule = {
   "name": "Server -> Files Transfer",
-  "version": "1.0.1",
+  "version": "1.1.1",
   "api_level": 4,
   "target_platform": "10.0.0",
   "description": "Core module",
@@ -91,78 +91,6 @@ module.exports.load = async function (app, db) {
       res.status(204).send();
     } catch (error) {
       console.error("Error copying files:", error);
-      res.status(500).json({ error: "Internal server error" });
-    }
-  });
-
-  async function getAvailableAllocations(nodeId) {
-    const response = await axios.get(
-      `${PANEL_URL}/nodes/${nodeId}/allocations?per_page=10000`,
-      {
-        headers: {
-          Authorization: `Bearer ${API_KEY}`,
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-      }
-    );
-    return response.data.data.filter(allocation => !allocation.attributes.assigned);
-  }
-
-  // GET server details helper
-  async function getServerDetails(serverId) {
-    const response = await axios.get(
-      `${PANEL_URL}/api/application/servers/${serverId}`,
-      {
-        headers: {
-          Authorization: `Bearer ${API_KEY}`,
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-      }
-    );
-    return response.data.data;
-  }
-
-  // Server transfer endpoint
-  router.get("/server/transfer", isAuthenticated, ownsServer, async (req, res) => {
-    const { id, nodeId } = req.query;
-
-    if (!id || !nodeId) {
-      return res.status(400).json({ error: "Missing required parameters: id or nodeId" });
-    }
-
-    try {
-      const server = await getServerDetails(id);
-      const availableAllocations = await getAvailableAllocations(nodeId);
-
-      if (availableAllocations.length === 0) {
-        return res.status(500).json({ error: "No available allocations on the target node" });
-      }
-
-      await axios.post(
-        `${PANEL_URL}/admin/servers/view/${id}/manage/transfer`,
-        {
-          node_id: nodeId,
-          allocation_id: availableAllocations[0].attributes.id
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${API_KEY}`,
-            Accept: "application/json",
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      await recordServerActivity(db, req, id, 'server.transfer', {
-        nodeId,
-      });
-      res.status(200).json({
-        message: `Transfer for server ${id} to node ${nodeId} initiated.`,
-      });
-    } catch (error) {
-      console.error("Error transferring server:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });
