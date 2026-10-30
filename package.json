@@ -6,24 +6,23 @@
   "author": "Matt James",
   "dependencies": {
     "@iarna/toml": "^2.2.5",
-    "@prisma/client": "^5.22.0",
-    "@simplewebauthn/server": "^13.1.1",
+    "@simplewebauthn/server": "^14.0.3",
     "axios": "^1.21.0",
-    "bcrypt": "^5.1.1",
-    "chokidar": "^3.6.0",
+    "bcrypt": "^6.0.0",
+    "chokidar": "^6.0.0",
     "compression": "^1.8.2",
     "connect-pg-simple": "^10.0.0",
     "connect-sqlite3": "^0.9.18",
     "cookie-parser": "^1.4.7",
     "discord.js": "^14.27.0",
-    "dotenv": "^16.4.5",
-    "express": "^4.21.2",
-    "express-rate-limit": "^7.4.1",
+    "dotenv": "^18.0.9",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.7.1",
     "express-session": "^1.17.2",
-    "express-ws": "^4.0.0",
+    "express-ws": "^5.0.2",
     "form-data": "^4.0.6",
     "geoip-lite": "^2.0.3",
-    "ioredis": "^5.4.1",
+    "ioredis": "^6.0.0",
     "lru-cache": "^7.18.3",
     "nocache": "^4.0.0",
     "node-cache": "^5.1.2",
@@ -31,11 +30,12 @@
     "puppeteer": "^25.16.0",
     "qrcode": "^1.5.4",
     "speakeasy": "^2.0.0",
-    "sqlite3": "^5.1.7",
-    "stripe": "^20.2.0",
+    "sqlite3": "^6.0.1",
+    "stripe": "^20.4.1",
     "winston": "^3.14.2",
     "ws": "^8.22.0",
-    "zod": "^3.24.2"
+    "zod": "^3.24.2",
+    "@prisma/client": "^6.4.1"
   },
   "scripts": {
     "mono:build": "cd ../frontend && npm run build",
@@ -61,7 +61,7 @@
     "@babel/core": "^7.29.7",
     "@babel/plugin-transform-modules-commonjs": "^7.23.3",
     "@babel/preset-env": "^7.24.0",
-    "prisma": "^5.22.0"
+    "prisma": "^6.4.1"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
