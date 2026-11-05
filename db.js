@@ -67,16 +67,28 @@ function adjustUrlForDocker(url) {
   return url;
 }
 
+function createAdapter(provider, rawDatabaseUrl) {
+  if (provider === "mysql") {
+    const { PrismaMariaDb } = require("@prisma/adapter-mariadb");
+    const connectionUrl = adjustUrlForDocker(rawDatabaseUrl);
+    return new PrismaMariaDb({ url: connectionUrl });
+  }
+
+  const { PrismaBetterSqlite3 } = require("@prisma/adapter-better-sqlite3");
+  const sqliteUrl = rawDatabaseUrl || "file:./prisma/heliactyl.db";
+  return new PrismaBetterSqlite3({ url: sqliteUrl });
+}
+
 function getClient() {
   if (!prisma) {
     const rawDatabaseUrl = dbProvider === "mysql"
       ? (process.env.MYSQL_DATABASE_URL || process.env.DATABASE_URL)
       : (process.env.SQLITE_DATABASE_URL || process.env.DATABASE_URL);
 
-    const databaseUrl = adjustUrlForDocker(rawDatabaseUrl);
+    const adapter = createAdapter(dbProvider, rawDatabaseUrl);
 
     prisma = new PrismaClient({
-      ...(databaseUrl ? { datasources: { db: { url: databaseUrl } } } : {}),
+      adapter,
       log:
         process.env.NODE_ENV === "development"
           ? ["warn", "error"]

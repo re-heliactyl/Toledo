@@ -6,9 +6,14 @@
   "author": "Matt James",
   "dependencies": {
     "@iarna/toml": "^2.2.5",
+    "@prisma/adapter-better-sqlite3": "7.10.1",
+    "@prisma/adapter-mariadb": "7.10.1",
+    "@prisma/client": "^7.10.1",
+    "@prisma/client-runtime-utils": "7.10.1",
     "@simplewebauthn/server": "^14.0.3",
     "axios": "^1.21.0",
     "bcrypt": "^6.0.0",
+    "better-sqlite3": "^13.0.3",
     "chokidar": "^6.0.0",
     "compression": "^1.8.2",
     "connect-pg-simple": "^10.0.0",
@@ -24,6 +29,7 @@
     "geoip-lite": "^2.0.3",
     "ioredis": "^6.0.0",
     "lru-cache": "^7.18.3",
+    "mariadb": "^3.5.4",
     "nocache": "^4.0.0",
     "node-cache": "^5.1.2",
     "pg": "^8.23.1",
@@ -34,8 +40,7 @@
     "stripe": "^20.4.1",
     "winston": "^3.14.2",
     "ws": "^8.22.0",
-    "zod": "^3.24.2",
-    "@prisma/client": "^6.4.1"
+    "zod": "^3.24.2"
   },
   "scripts": {
     "mono:build": "cd ../frontend && npm run build",
@@ -61,7 +66,7 @@
     "@babel/core": "^7.29.7",
     "@babel/plugin-transform-modules-commonjs": "^7.23.3",
     "@babel/preset-env": "^7.24.0",
-    "prisma": "^6.4.1"
+    "prisma": "^7.10.1"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
