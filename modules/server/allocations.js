@@ -1,3 +1,4 @@
+const { validate, schemas } = require('../../handlers/validate');
 /* --------------------------------------------- */
 /* allocations                            */
 /* --------------------------------------------- */
@@ -40,7 +41,7 @@ module.exports.load = async function (app, db) {
   const router = express.Router();
 
   // Get server allocations
-  router.get('/server/:id/allocations', isAuthenticated, ownsServer, async (req, res) => {
+  router.get('/server/:id/allocations', isAuthenticated, ownsServer, validate(schemas.serverIdParam, 'params'), async (req, res) => {
     try {
       const serverId = req.params.id;
 
@@ -75,7 +76,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Add new allocation
-  router.post('/server/:id/allocations', isAuthenticated, isServerOwner, async (req, res) => {
+  router.post('/server/:id/allocations', isAuthenticated, isServerOwner, validate(schemas.serverIdParam, 'params'), async (req, res) => {
     try {
       const serverId = req.params.id;
 
@@ -112,7 +113,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Remove allocation
-  router.delete('/server/:id/allocations/:allocationId', isAuthenticated, isServerOwner, async (req, res) => {
+  router.delete('/server/:id/allocations/:allocationId', isAuthenticated, isServerOwner, validate(schemas.serverIdParam, 'params'), async (req, res) => {
     try {
       const { id: serverId, allocationId } = req.params;
 
@@ -165,7 +166,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Set primary allocation
-  router.post('/server/:id/allocations/:allocationId/set-primary', isAuthenticated, isServerOwner, async (req, res) => {
+  router.post('/server/:id/allocations/:allocationId/set-primary', isAuthenticated, isServerOwner, validate(schemas.serverIdParam, 'params'), async (req, res) => {
     try {
       const { id: serverId, allocationId } = req.params;
 
@@ -195,7 +196,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Update allocation alias (notes)
-  router.post('/server/:id/allocations/:allocationId/alias', isAuthenticated, isServerOwner, async (req, res) => {
+  router.post('/server/:id/allocations/:allocationId/alias', isAuthenticated, isServerOwner, validate(schemas.allocationAlias), async (req, res) => {
     try {
       const { id: serverId, allocationId } = req.params;
       const { alias } = req.body;

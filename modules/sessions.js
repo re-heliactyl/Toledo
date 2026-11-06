@@ -1,3 +1,4 @@
+const { validate, schemas } = require('../handlers/validate');
 const path = require('path');
 const sqlite3 = require('sqlite3');
 const geoip = require('geoip-lite');
@@ -183,7 +184,7 @@ module.exports.load = async function (app, db) {
   const sessionDbName = (settings.session && typeof settings.session.db === 'string') ? settings.session.db : 'sessions.db';
   const sessionsDbPath = path.isAbsolute(sessionDbName) ? sessionDbName : path.resolve(__dirname, '..', sessionDbName);
 
-  app.get('/api/user/sessions', authz.requireSession, async (req, res) => {
+  app.get('/api/user/sessions', authz.requireSession, validate(schemas.emptyPayload, 'query'), async (req, res) => {
     try {
       const userId = authz.getSessionUser(req).id;
       const currentSid = req.sessionID;
@@ -314,7 +315,7 @@ module.exports.load = async function (app, db) {
   app.delete('/api/user/sessions/revoke-others', authz.requireSession, handleRevokeOthers);
   app.delete('/api/user/sessions/others', authz.requireSession, handleRevokeOthers);
 
-  app.delete('/api/user/sessions/:sid', authz.requireSession, async (req, res) => {
+  app.delete('/api/user/sessions/:sid', authz.requireSession, validate(schemas.stringIdParam, 'params'), async (req, res) => {
     try {
       const userId = authz.getSessionUser(req).id;
       const targetSid = req.params.sid;

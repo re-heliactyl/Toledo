@@ -60,7 +60,7 @@ module.exports.load = async function (app, db) {
   const router = express.Router();
 
   // GET /api/server/:id/variables - Get server variables
-  router.get('/server/:id/variables', isAuthenticated, ownsServer, async (req, res) => {
+  router.get('/server/:id/variables', isAuthenticated, ownsServer, validate(schemas.serverIdParam, 'params'), async (req, res) => {
     try {
       const serverId = req.params.id;
       const response = await axios.get(

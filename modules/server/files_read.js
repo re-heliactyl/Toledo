@@ -1,3 +1,4 @@
+const { validate, schemas } = require('../../handlers/validate');
 /* --------------------------------------------- */
 /* files_read                             */
 /* --------------------------------------------- */
@@ -41,7 +42,7 @@ module.exports.load = async function (app, db) {
   const router = express.Router();
 
   // GET /api/server/:id/files/contents
-  router.get("/server/:id/files/contents", isAuthenticated, requireServerPermission("file.read"), async (req, res) => {
+  router.get("/server/:id/files/contents", validate(schemas.serverIdParam, 'params'), isAuthenticated, requireServerPermission("file.read"), async (req, res) => {
     try {
       const serverId = req.params.id;
       let file = String(req.query.file || "").trim();
@@ -81,7 +82,7 @@ module.exports.load = async function (app, db) {
   });
 
   // GET /api/server/:id/files/download
-  router.get("/server/:id/files/download", isAuthenticated, requireServerPermission("file.read"), async (req, res) => {
+  router.get("/server/:id/files/download", validate(schemas.serverIdParam, 'params'), isAuthenticated, requireServerPermission("file.read"), async (req, res) => {
     try {
       const serverId = req.params.id;
       let file = String(req.query.file || "").trim().replace(/\/+/g, '/').replace(/\/+$/, '');

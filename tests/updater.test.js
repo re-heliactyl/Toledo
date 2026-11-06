@@ -19,8 +19,8 @@ async function runTests() {
   // 2. Test routes setup and mock DB / App
   const routes = {};
   const mockApp = {
-    get: (path, handler) => { routes["GET " + path] = handler; },
-    post: (path, handler) => { routes["POST " + path] = handler; }
+    get: (path, ...handlers) => { routes["GET " + path] = async (req, res) => { for (const h of handlers) { let n = false; await h(req, res, () => { n = true; }); if (!n) break; } }; },
+    post: (path, ...handlers) => { routes["POST " + path] = async (req, res) => { for (const h of handlers) { let n = false; await h(req, res, () => { n = true; }); if (!n) break; } }; }
   };
 
   const store = {};
@@ -96,7 +96,7 @@ async function runTests() {
 
   // Update config with a valid secret
   adminReq.body = { enabled: false, checkInterval: 60, maxBackups: 5, webhookSecret: "secret123" };
-  await routes["POST /api/admin/updater/config"](adminReq, mockRes);
+  await routes["POST /api/admin/updater/config"](adminReq, mockRes); 
   assert.strictEqual(resData.success, true);
   assert.strictEqual(resData.config.enabled, false);
   assert.strictEqual(resData.config.checkInterval, 60);

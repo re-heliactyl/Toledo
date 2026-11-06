@@ -1,3 +1,4 @@
+const { validate, schemas } = require('../../handlers/validate');
 /* --------------------------------------------- */
 /* backups                                */
 /* --------------------------------------------- */
@@ -50,7 +51,7 @@ module.exports.load = async function (app, db) {
   };
 
   // GET /api/server/:id/backups - List backups
-  router.get("/server/:id/backups", isAuthenticated, ownsServer, async (req, res) => {
+  router.get("/server/:id/backups", isAuthenticated, ownsServer, validate(schemas.serverIdParam, "params"), async (req, res) => {
     try {
       const serverId = req.params.id;
       const response = await axios.get(
@@ -72,7 +73,7 @@ module.exports.load = async function (app, db) {
   });
 
   // POST /api/server/:id/backups - Create backup
-  router.post("/server/:id/backups", isAuthenticated, ownsServer, async (req, res) => {
+  router.post("/server/:id/backups", isAuthenticated, ownsServer, validate(schemas.serverIdParam, 'params'), async (req, res) => {
     try {
       const serverId = req.params.id;
       const response = await axios.post(
@@ -101,7 +102,7 @@ module.exports.load = async function (app, db) {
   // GET /api/server/:id/backups/:backupId/download - Get backup download URL
   router.get(
     "/server/:id/backups/:backupId/download",
-    isAuthenticated,
+    validate(schemas.backupDownloadParam, 'params'), isAuthenticated,
     ownsServer,
     async (req, res) => {
       try {
@@ -132,7 +133,7 @@ module.exports.load = async function (app, db) {
   // DELETE /api/server/:id/backups/:backupId - Delete backup
   router.delete(
     "/server/:id/backups/:backupId",
-    isAuthenticated,
+    validate(schemas.backupDownloadParam, 'params'), isAuthenticated,
     ownsServer,
     async (req, res) => {
       try {

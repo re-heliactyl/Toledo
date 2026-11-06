@@ -1,3 +1,4 @@
+const { validate, schemas } = require('../../handlers/validate');
 /* --------------------------------------------- */
 /* logs                                   */
 /* --------------------------------------------- */
@@ -45,7 +46,7 @@ module.exports.load = async function (app, db) {
   const router = express.Router();
 
   // GET /api/server/:id/logs - Get server activity logs
-  router.get('/server/:id/logs', isAuthenticated, ownsServer, async (req, res) => {
+  router.get('/server/:id/logs', isAuthenticated, ownsServer, validate(schemas.serverIdParam, 'params'), async (req, res) => {
     try {
       const serverId = req.params.id;
       const page = parseInt(req.query.page) || 1;

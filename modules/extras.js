@@ -45,7 +45,7 @@ module.exports.HeliactylModule = HeliactylModule;
 module.exports.load = async function (app, db) {
   const authz = createAuthz(db);
 
-  app.get(`/api/password`, async (req, res) => {
+  app.get(`/api/password`, validate(schemas.emptyPayload, 'query'), async (req, res) => {
     if (!authz.hasUserSession(req)) return res.redirect("/login");
     const sessionUser = authz.getSessionUser(req);
     const pteroUser = authz.getPterodactylUser(req);
@@ -79,11 +79,11 @@ module.exports.load = async function (app, db) {
     }
   });
 
-  app.get("/panel", async (req, res) => {
+  app.get("/panel", validate(schemas.emptyPayload, 'query'), async (req, res) => {
     res.redirect(settings.pterodactyl.domain);
   });
 
-  app.get("/regen", async (req, res) => {
+  app.get("/regen", validate(schemas.emptyPayload, 'query'), async (req, res) => {
     if (!authz.hasPterodactylSession(req) || !authz.hasUserSession(req)) return res.redirect("/login");
     if (settings.api.client.allow.regen !== true) return res.send("You cannot regenerate your password currently.");
 

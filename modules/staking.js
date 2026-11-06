@@ -349,7 +349,7 @@ module.exports.load = function (app, db) {
   // ==== API ENDPOINTS ====
 
   // Get available staking plans
-  app.get('/api/staking/plans', async (req, res) => {
+  app.get('/api/staking/plans', validate(schemas.emptyPayload, 'query'), async (req, res) => {
     try {
       const plans = await stakingManager.getAvailablePlans();
       res.json(plans);
@@ -360,7 +360,7 @@ module.exports.load = function (app, db) {
   });
 
   // Get user's stakes
-  app.get('/api/staking/stakes', async (req, res) => {
+  app.get('/api/staking/stakes', validate(schemas.emptyPayload, 'query'), async (req, res) => {
     try {
       if (!authz.hasUserSession(req)) return res.status(401).json({ error: 'Unauthorized' });
 
@@ -374,7 +374,7 @@ module.exports.load = function (app, db) {
   });
 
   // Get user's staking summary
-  app.get('/api/staking/summary', async (req, res) => {
+  app.get('/api/staking/summary', validate(schemas.emptyPayload, 'query'), async (req, res) => {
     try {
       if (!authz.hasUserSession(req)) return res.status(401).json({ error: 'Unauthorized' });
 
@@ -413,7 +413,7 @@ module.exports.load = function (app, db) {
   });
 
   // Claim a stake
-  app.post('/api/staking/stakes/:stakeId/claim', async (req, res) => {
+  app.post('/api/staking/stakes/:stakeId/claim', validate(schemas.stringIdParam, 'params'), async (req, res) => {
     try {
       if (!authz.hasUserSession(req)) return res.status(401).json({ error: 'Unauthorized' });
 
@@ -437,7 +437,7 @@ module.exports.load = function (app, db) {
   });
 
   // Get staking transaction history
-  app.get('/api/staking/history', async (req, res) => {
+  app.get('/api/staking/history', validate(schemas.emptyPayload, 'query'), async (req, res) => {
     try {
       if (!authz.hasUserSession(req)) return res.status(401).json({ error: 'Unauthorized' });
 
@@ -465,7 +465,7 @@ module.exports.load = function (app, db) {
   });
 
   // Get projected earnings for a potential stake
-  app.get('/api/staking/calculate', async (req, res) => {
+  app.get('/api/staking/calculate', validate(schemas.emptyPayload, 'query'), async (req, res) => {
     try {
       const { planId, amount, duration } = req.query;
 
@@ -509,7 +509,7 @@ module.exports.load = function (app, db) {
   });
 
   // Get active staking users (admin only)
-  app.get('/api/admin/staking/active-users', async (req, res) => {
+  app.get('/api/admin/staking/active-users', validate(schemas.emptyPayload, 'query'), async (req, res) => {
     try {
       if (!authz.hasUserSession(req) || !authz.hasPterodactylSession(req) || !await authz.getAdminStatus(req)) {
         return res.status(403).json({ error: 'Forbidden' });

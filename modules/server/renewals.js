@@ -1,3 +1,4 @@
+const { validate, schemas } = require('../../handlers/validate');
 const express = require("express");
 const axios = require("axios");
 const loadConfig = require("../../handlers/config");
@@ -757,7 +758,7 @@ module.exports.load = async function (app, db) {
 
   const router = express.Router();
 
-  router.get("/server/:id/renewal/status", isAuthenticated, ownsServer, async (req, res) => {
+  router.get("/server/:id/renewal/status", isAuthenticated, ownsServer, validate(schemas.serverIdParam, "params"), async (req, res) => {
     try {
       const record = await getRenewalRecord(db, req.params.id);
 
@@ -772,7 +773,7 @@ module.exports.load = async function (app, db) {
     }
   });
 
-  router.post("/server/:id/renewal/renew", isAuthenticated, isServerOwner, async (req, res) => {
+  router.post("/server/:id/renewal/renew", validate(schemas.serverIdParam, 'params'), isAuthenticated, isServerOwner, async (req, res) => {
     try {
       const config = getRenewalConfig();
       if (!config.enabled) {

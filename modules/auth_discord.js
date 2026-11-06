@@ -1,3 +1,4 @@
+const { validate, schemas } = require('../handlers/validate');
 const vpnCheck = require("../handlers/vpnCheck.js");
 const crypto = require('crypto');
 const bcrypt = require('bcrypt');
@@ -241,7 +242,7 @@ module.exports.load = async function (app, db) {
   const ipCheck = createIpCheck(db);
 
   // OAuth login endpoint
-  app.get('/auth/discord/login', (req, res) => {
+  app.get('/auth/discord/login', validate(schemas.emptyPayload, 'query'), (req, res) => {
     const state = crypto.randomUUID();
     req.session.oauthState = state;
 
@@ -257,7 +258,7 @@ module.exports.load = async function (app, db) {
   });
 
   // OAuth callback handler
-  app.get('/auth/discord/callback', async (req, res) => {
+  app.get('/auth/discord/callback', validate(schemas.discordCallbackQuery, 'query'), async (req, res) => {
     const { code, state } = req.query;
 
     const redirectAuthError = (reason = 'discord_auth_failed') => {
@@ -480,7 +481,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Token refresh endpoint
-  app.post('/auth/discord/refresh', async (req, res) => {
+  app.post('/auth/discord/refresh', validate(schemas.emptyPayload), async (req, res) => {
     if (!authz.hasUserSession(req)) {
       return res.status(401).json({ error: 'Not authenticated' });
     }

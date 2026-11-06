@@ -1,3 +1,4 @@
+const { validate, schemas } = require('../handlers/validate');
 "use strict";
 
 const fs = require("fs").promises;
@@ -163,7 +164,7 @@ class UpdateManager {
   }
 
   setupRoutes(app) {
-    app.get("/api/admin/updater/config", async (req, res) => {
+    app.get("/api/admin/updater/config", validate(schemas.emptyPayload, "query"), async (req, res) => {
       if (!await checkAdminStatus(req, res, this.db)) return res.status(403).json({ error: "Forbidden" });
       try {
         const config = await this.getConfig();
@@ -174,7 +175,7 @@ class UpdateManager {
       }
     });
 
-    app.post("/api/admin/updater/config", async (req, res) => {
+    app.post("/api/admin/updater/config", validate(schemas.updaterConfig), async (req, res) => {
       if (!await checkAdminStatus(req, res, this.db)) return res.status(403).json({ error: "Forbidden" });
       try {
         const { enabled, checkInterval, webhookSecret, maxBackups } = req.body;
@@ -216,7 +217,7 @@ class UpdateManager {
       }
     });
 
-    app.get("/api/admin/updater/status", async (req, res) => {
+    app.get("/api/admin/updater/status", validate(schemas.emptyPayload, "query"), async (req, res) => {
       if (!await checkAdminStatus(req, res, this.db)) return res.status(403).json({ error: "Forbidden" });
       try {
         const release = await this.fetchLatestRelease();
@@ -240,14 +241,14 @@ class UpdateManager {
       }
     });
 
-    app.post("/api/admin/updater/trigger", async (req, res) => {
+    app.post("/api/admin/updater/trigger", validate(schemas.emptyPayload), async (req, res) => {
       if (!await checkAdminStatus(req, res, this.db)) return res.status(403).json({ error: "Forbidden" });
       if (this.updating) return res.status(409).json({ error: "Update already in progress" });
       res.json({ status: "checking" });
       this.checkForUpdates();
     });
 
-    app.post("/api/webhooks/github", async (req, res) => {
+    app.post("/api/webhooks/github", validate(schemas.emptyPayload), async (req, res) => {
       const config = await this.getConfig();
       if (!config.webhookSecret || typeof config.webhookSecret !== "string" || config.webhookSecret.trim() === "") {
         return res.status(403).json({ error: "Webhook secret not configured" });

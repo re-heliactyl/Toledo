@@ -1,3 +1,4 @@
+const { validate, schemas } = require('../../handlers/validate');
 /* --------------------------------------------- */
 /* files_list                             */
 /* --------------------------------------------- */
@@ -116,7 +117,7 @@ module.exports.load = async function (app, db) {
   const router = express.Router();
 
   // GET /api/server/:id/files/list
-  router.get("/server/:id/files/list", isAuthenticated, requireServerPermission("file.read"), async (req, res) => {
+  router.get("/server/:id/files/list", validate(schemas.serverIdParam, 'params'), isAuthenticated, requireServerPermission("file.read"), async (req, res) => {
     try {
       const serverId = req.params.id;
       const directory = req.query.directory || "/";
@@ -163,7 +164,7 @@ module.exports.load = async function (app, db) {
     }
   });
 
-  router.get("/server/:id/files/folder-size", isAuthenticated, requireServerPermission("file.read"), async (req, res) => {
+  router.get("/server/:id/files/folder-size", validate(schemas.serverIdParam, 'params'), isAuthenticated, requireServerPermission("file.read"), async (req, res) => {
     try {
       const serverId = req.params.id;
       const directory = normalizeDirectoryPath(req.query.directory || "/");

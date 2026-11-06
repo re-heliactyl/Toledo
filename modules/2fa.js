@@ -82,7 +82,7 @@ module.exports.load = async function (app, db) {
   const isAuthenticated = authz.requireSession;
 
   // Get 2FA status
-  app.get('/api/2fa/status', isAuthenticated, async (req, res) => {
+  app.get('/api/2fa/status', isAuthenticated, validate(schemas.emptyPayload, 'query'), async (req, res) => {
     try {
       const userId = authz.getSessionUser(req).id;
       const user = await db.user.findUnique({
@@ -100,7 +100,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Initialize 2FA setup
-  app.post('/api/2fa/setup', isAuthenticated, async (req, res) => {
+  app.post('/api/2fa/setup', isAuthenticated, validate(schemas.emptyPayload), async (req, res) => {
     try {
       const sessionUser = authz.getSessionUser(req);
       const userId = sessionUser.id;
@@ -229,7 +229,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Get new backup codes
-  app.post('/api/2fa/backup-codes', isAuthenticated, async (req, res) => {
+  app.post('/api/2fa/backup-codes', isAuthenticated, validate(schemas.emptyPayload), async (req, res) => {
     try {
       const userId = authz.getSessionUser(req).id;
 

@@ -84,7 +84,7 @@ module.exports.load = async function (app, db) {
   }
 
   // Get ticket statistics (admin only)
-  app.get("/api/tickets/stats", async (req, res) => {
+  app.get("/api/tickets/stats", validate(schemas.emptyPayload, 'query'), async (req, res) => {
     if (!await checkAdmin(req, res, settings, db)) {
       return res.status(403).json({ error: "Unauthorized" });
     }
@@ -120,7 +120,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Get ticket count for user
-  app.get("/api/tickets/count", async (req, res) => {
+  app.get("/api/tickets/count", validate(schemas.emptyPayload, 'query'), async (req, res) => {
     if (!authz.hasUserSession(req)) return res.status(401).json({ error: "Unauthorized" });
     const sessionUser = authz.getSessionUser(req);
 
@@ -143,7 +143,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Get recent activity for admin dashboard
-  app.get("/api/tickets/activity", async (req, res) => {
+  app.get("/api/tickets/activity", validate(schemas.emptyPayload, 'query'), async (req, res) => {
     if (!await checkAdmin(req, res, settings, db)) {
       return res.status(403).json({ error: "Unauthorized" });
     }
@@ -178,7 +178,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Search tickets (admin only) with pagination
-  app.get("/api/tickets/search", async (req, res) => {
+  app.get("/api/tickets/search", validate(schemas.emptyPayload, 'query'), async (req, res) => {
     if (!await checkAdmin(req, res, settings, db)) {
       return res.status(403).json({ error: "Unauthorized" });
     }
@@ -219,7 +219,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Export tickets to CSV (admin only)
-  app.get("/api/tickets/export", async (req, res) => {
+  app.get("/api/tickets/export", validate(schemas.emptyPayload, 'query'), async (req, res) => {
     if (!await checkAdmin(req, res, settings, db)) {
       return res.status(403).json({ error: "Unauthorized" });
     }
@@ -298,7 +298,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Get all tickets (admin only) with pagination
-  app.get("/api/tickets/all", async (req, res) => {
+  app.get("/api/tickets/all", validate(schemas.emptyPayload, 'query'), async (req, res) => {
     if (!await checkAdmin(req, res, settings, db)) {
       return res.status(403).json({ error: "Unauthorized" });
     }
@@ -350,7 +350,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Get user's tickets with pagination
-  app.get("/api/tickets", async (req, res) => {
+  app.get("/api/tickets", validate(schemas.emptyPayload, 'query'), async (req, res) => {
     if (!authz.hasUserSession(req)) return res.status(401).json({ error: "Unauthorized" });
     const sessionUser = authz.getSessionUser(req);
 
@@ -372,7 +372,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Get specific ticket
-  app.get("/api/tickets/:id", async (req, res) => {
+  app.get("/api/tickets/:id", validate(schemas.idParam, 'params'), async (req, res) => {
     if (!authz.hasUserSession(req)) return res.status(401).json({ error: "Unauthorized" });
     const sessionUser = authz.getSessionUser(req);
 
@@ -633,7 +633,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Archive a ticket
-  app.post("/api/tickets/:id/archive", async (req, res) => {
+  app.post("/api/tickets/:id/archive", validate(schemas.idParam, 'params'), async (req, res) => {
     if (!await checkAdmin(req, res, settings, db)) {
       return res.status(403).json({ error: "Unauthorized" });
     }

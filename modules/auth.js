@@ -506,7 +506,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Magic link login verification
-  app.get("/auth/magic-login", magicLoginRateLimit, async (req, res) => {
+  app.get("/auth/magic-login", validate(schemas.magicTokenQuery, 'query'), magicLoginRateLimit, async (req, res) => {
     const { token } = req.query;
     const clientIp = getClientIp(req);
 
@@ -607,7 +607,7 @@ module.exports.load = async function (app, db) {
     res.redirect('/dashboard'); // Redirect to dashboard after successful login
   });
 
-  app.post("/api/user/logout", async (req, res) => {
+  app.post("/api/user/logout", validate(schemas.emptyPayload), async (req, res) => {
     if (!authz.hasUserSession(req)) {
       return res.status(401).json({ error: "Not logged in" });
     }
@@ -647,7 +647,7 @@ module.exports.load = async function (app, db) {
     });
   });
 
-  app.delete("/api/user/account", async (req, res) => {
+  app.delete("/api/user/account", validate(schemas.emptyPayload), async (req, res) => {
     if (!authz.hasUserSession(req)) {
       return res.status(401).json({ error: "Not authenticated" });
     }

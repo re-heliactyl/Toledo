@@ -806,7 +806,7 @@ module.exports.load = function (app, db) {
   // ==== API ENDPOINTS ====
 
   // Get available boost types
-  app.get('/api/boosts/types', boostsEnabled, async (req, res) => {
+  app.get('/api/boosts/types', validate(schemas.emptyPayload, 'query'), boostsEnabled, async (req, res) => {
     try {
       const boostTypes = await boostManager.getAvailableBoosts();
       res.json(boostTypes);
@@ -817,7 +817,7 @@ module.exports.load = function (app, db) {
   });
 
   // Get active boosts for a server
-  app.get('/api/boosts/server/:serverId', boostsEnabled, async (req, res) => {
+  app.get('/api/boosts/server/:serverId', validate(schemas.serverIdParam, 'params'), boostsEnabled, async (req, res) => {
     try {
       if (!authz.hasUserSession(req)) return res.status(401).json({ error: 'Unauthorized' });
 
@@ -841,7 +841,7 @@ module.exports.load = function (app, db) {
   });
 
   // Get all active boosts for the user
-  app.get('/api/boosts/active', boostsEnabled, async (req, res) => {
+  app.get('/api/boosts/active', validate(schemas.emptyPayload, 'query'), boostsEnabled, async (req, res) => {
     try {
       if (!authz.hasUserSession(req)) return res.status(401).json({ error: 'Unauthorized' });
 
@@ -856,7 +856,7 @@ module.exports.load = function (app, db) {
   });
 
   // Get scheduled boosts
-  app.get('/api/boosts/scheduled', boostsEnabled, async (req, res) => {
+  app.get('/api/boosts/scheduled', validate(schemas.emptyPayload, 'query'), boostsEnabled, async (req, res) => {
     try {
       if (!authz.hasUserSession(req)) return res.status(401).json({ error: 'Unauthorized' });
 
@@ -871,7 +871,7 @@ module.exports.load = function (app, db) {
   });
 
   // Get boost history
-  app.get('/api/boosts/history', boostsEnabled, async (req, res) => {
+  app.get('/api/boosts/history', validate(schemas.emptyPayload, 'query'), boostsEnabled, async (req, res) => {
     try {
       if (!authz.hasUserSession(req)) return res.status(401).json({ error: 'Unauthorized' });
 

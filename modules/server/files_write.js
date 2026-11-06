@@ -48,7 +48,7 @@ module.exports.load = async function (app, db) {
   const router = express.Router();
 
   // POST /api/server/:id/files/write
-  router.post("/server/:id/files/write", isAuthenticated, requireServerPermission(["file.create", "file.update"]), express.text({ limit: "50mb", type: "*/*" }), async (req, res) => {
+  router.post("/server/:id/files/write", validate(schemas.serverIdParam, 'params'), isAuthenticated, requireServerPermission(["file.create", "file.update"]), express.text({ limit: "50mb", type: "*/*" }), async (req, res) => {
     try {
       const serverId = req.params.id;
       let file = String(req.query.file || "").trim();

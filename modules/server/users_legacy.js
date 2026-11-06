@@ -1,3 +1,4 @@
+const { validate, schemas } = require('../../handlers/validate');
 /* --------------------------------------------- */
 /* users_legacy                           */
 /* --------------------------------------------- */
@@ -36,7 +37,7 @@ module.exports.load = async function (app, db) {
   const authz = createAuthz(db);
 
   // GET /api/subuser-servers - List servers where user is a subuser
-  router.get('/subuser-servers', isAuthenticated, async (req, res) => {
+  router.get('/subuser-servers', isAuthenticated, validate(schemas.emptyPayload, 'query'), async (req, res) => {
     try {
       const sessionUser = authz.getSessionUser(req);
       const results = await db.subuserServer.findMany({
@@ -57,7 +58,7 @@ module.exports.load = async function (app, db) {
   });
 
   // POST /api/sync-user-servers - Sync user's servers and subuser permissions
-  router.post('/subuser-servers-sync', isAuthenticated, async (req, res) => {
+  router.post('/subuser-servers-sync', isAuthenticated, validate(schemas.emptyPayload), async (req, res) => {
     try {
       const sessionUser = authz.getSessionUser(req);
       const pteroUser = authz.getPterodactylUser(req);

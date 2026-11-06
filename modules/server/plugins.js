@@ -121,7 +121,7 @@ module.exports.load = async function (app, db) {
   };
 
   // GET /api/plugins/platforms - List available plugin platforms
-  router.get("/plugins/platforms", (req, res) => {
+  router.get("/plugins/platforms", validate(schemas.emptyPayload, 'query'), (req, res) => {
     res.json({
       platforms: cache.platforms,
       default: 'spigot'
@@ -129,7 +129,7 @@ module.exports.load = async function (app, db) {
   });
 
   // GET /api/plugins/categories - List plugin categories
-  router.get("/plugins/categories", async (req, res) => {
+  router.get("/plugins/categories", validate(schemas.emptyPayload, 'query'), async (req, res) => {
     const { platform = 'spigot' } = req.query;
 
     if (!cache.platforms.includes(platform)) {
@@ -174,7 +174,7 @@ module.exports.load = async function (app, db) {
   });
 
   // GET /api/plugins/list - List plugins with filtering and pagination
-  router.get("/plugins/list", async (req, res) => {
+  router.get("/plugins/list", validate(schemas.pluginSearchQuery, 'query'), async (req, res) => {
     const {
       platform = 'spigot',
       category,
@@ -287,7 +287,7 @@ module.exports.load = async function (app, db) {
   });
 
   // GET /api/plugins/search - Search plugins
-  router.get("/plugins/search", async (req, res) => {
+  router.get("/plugins/search", validate(schemas.pluginSearchQuery, 'query'), async (req, res) => {
     const {
       query,
       platform = 'spigot',
@@ -391,7 +391,7 @@ module.exports.load = async function (app, db) {
   });
 
   // GET /api/plugins/details/:pluginId - Get plugin details
-  router.get("/plugins/details/:pluginId", async (req, res) => {
+  router.get("/plugins/details/:pluginId", validate(schemas.pluginIdParam, 'params'), async (req, res) => {
     const { pluginId } = req.params;
     const { platform = 'spigot' } = req.query;
 
@@ -498,7 +498,7 @@ module.exports.load = async function (app, db) {
 
   // Add this new endpoint to plugins.js
   // GET /api/plugins/scan/:serverId - Scan server plugins directory and update DB
-  router.get("/plugins/scan/:serverId", isAuthenticated, ownsServer, async (req, res) => {
+  router.get("/plugins/scan/:serverId", validate(schemas.serverIdParam, 'params'), isAuthenticated, ownsServer, async (req, res) => {
     const { serverId } = req.params;
 
     try {
@@ -725,7 +725,7 @@ module.exports.load = async function (app, db) {
   });
 
   // GET /api/plugins/installed/:serverId - List installed plugins
-  router.get("/plugins/installed/:serverId", isAuthenticated, ownsServer, async (req, res) => {
+  router.get("/plugins/installed/:serverId", validate(schemas.serverIdParam, 'params'), isAuthenticated, ownsServer, async (req, res) => {
     const { serverId } = req.params;
 
     try {

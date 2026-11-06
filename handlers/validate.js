@@ -33,7 +33,7 @@ function validate(schema, target = 'body') {
 
     // Replace with parsed/coerced data
     req[target] = result.data;
-    next();
+    if (typeof next === "function") next();
   };
 }
 
@@ -67,7 +67,7 @@ function validateMultiple(schemas) {
       });
     }
 
-    next();
+    if (typeof next === "function") next();
   };
 }
 
@@ -689,6 +689,217 @@ const schemas = {
   }),
 
   // Passkey authentication verification (WebAuthn response)
+  // Generic ID parameter
+   fileParam: z.object({ file: z.string().min(1).trim() }),
+  idParam: z.object({
+     id: z.coerce.number().int().positive('ID must be a positive integer')
+   }),
+ 
+   // Generic string ID parameter
+   stringIdParam: z.object({
+     id: z.string({ required_error: 'ID is required' }).min(1).trim()
+   }),
+ 
+   // Allocation alias update
+   allocationAlias: z.object({
+     alias: z.string().max(255).trim().optional().default('')
+   }),
+ 
+   // Subdomain creation
+   subdomainCreate: z.object({
+     subdomain: z.string({ required_error: 'Subdomain name is required' })
+       .min(1, 'Subdomain name is required')
+       .max(63, 'Subdomain cannot exceed 63 characters')
+       .regex(/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/, 'Invalid subdomain format. Must be 1-63 characters, lowercase alphanumeric, cannot start or end with hyphen')
+       .trim(),
+     domainName: z.string().min(1).trim().optional()
+   }),
+ 
+   // Subdomain deletion params
+   subdomainIdParam: z.object({
+     id: z.string().min(1),
+     subdomainId: z.coerce.number().int().positive()
+   }),
+ 
+   // Role creation
+   roleCreate: z.object({
+     name: z.string({ required_error: 'Role name is required' }).min(1).max(100).trim(),
+     description: z.string().max(255).trim().optional().nullable(),
+     color: z.string().max(30).optional(),
+     priority: z.coerce.number().int().optional(),
+     permissions: z.array(z.string()).optional()
+   }),
+ 
+   // Role update
+   roleUpdate: z.object({
+     name: z.string().min(1).max(100).trim().optional(),
+     description: z.string().max(255).trim().optional().nullable(),
+     color: z.string().max(30).optional(),
+     priority: z.coerce.number().int().optional(),
+     permissions: z.array(z.string()).optional()
+   }),
+ 
+   // Assign roles to user
+   userRolesUpdate: z.object({
+     roleIds: z.array(z.coerce.number().int(), { required_error: 'roleIds array is required' })
+   }),
+ 
+   // API v5 - User Info
+   apiV5UserInfo: z.object({
+     target: z.union([z.string().min(1), z.number()])
+   }),
+ 
+   // API v5 - User Coins
+   apiV5UserCoins: z.object({
+     target: z.union([z.string().min(1), z.number()]),
+     action: z.enum(['add', 'set', 'remove']),
+     amount: z.coerce.number().int().min(0, 'Amount must be a non-negative integer'),
+     reason: z.string().optional(),
+     moderator: z.string().optional()
+   }),
+ 
+   // API v5 - User Resources
+   apiV5UserResources: z.object({
+     target: z.union([z.string().min(1), z.number()]),
+     action: z.enum(['add', 'set', 'remove']),
+     reason: z.string().optional(),
+     cpu: z.coerce.number().int().optional().nullable(),
+     ram: z.coerce.number().int().optional().nullable(),
+     disk: z.coerce.number().int().optional().nullable(),
+     servers: z.coerce.number().int().optional().nullable(),
+     moderator: z.string().optional()
+   }),
+ 
+   // API v5 - User Ban
+   apiV5UserBan: z.object({
+     target: z.union([z.string().min(1), z.number()]),
+     reason: z.string({ required_error: 'Reason is required' }).min(1).trim(),
+     moderator: z.string().optional(),
+     moderatorId: z.coerce.number().optional()
+   }),
+ 
+   // API v5 - User Unban
+   apiV5UserUnban: z.object({
+     target: z.union([z.string().min(1), z.number()]),
+     reason: z.string().optional(),
+     moderator: z.string().optional()
+   }),
+ 
+   // API v5 - Server List
+   apiV5ServerList: z.object({
+     target: z.union([z.string().min(1), z.number()]).optional()
+   }),
+ 
+   // API v5 - Server Info
+   apiV5ServerInfo: z.object({
+     serverId: z.string({ required_error: 'serverId is required' }).min(1).trim()
+   }),
+ 
+   // API v5 - Server Control
+   apiV5ServerControl: z.object({
+     serverId: z.string({ required_error: 'serverId is required' }).min(1).trim(),
+     action: z.enum(['start', 'stop', 'restart', 'kill']),
+     reason: z.string().optional(),
+     moderator: z.string().optional()
+   }),
+ 
+   // Bundle checkout session creation
+   bundleCheckout: z.object({
+     type: z.enum(['auto_renew', 'upgraded_pack', 'god_pack'], {
+       errorMap: () => ({ message: 'Invalid bundle type' })
+     })
+   }),
+ 
+   // Referral generation
+   referralGenerate: z.object({
+     code: z.string({ required_error: 'Referral code is required' }).min(1).max(15).regex(/^[^\s]+$/, 'Referral code cannot contain spaces').trim()
+   }),
+ 
+   // Referral claim
+   referralClaim: z.object({
+     code: z.string({ required_error: 'Referral code is required' }).min(1).max(50).trim()
+   }),
+ 
+   // Updater configuration
+   updaterConfig: z.object({
+     enabled: z.boolean().optional(),
+     checkInterval: z.coerce.number().int().min(5, 'Check interval must be at least 5 minutes').optional(),
+     maxBackups: z.coerce.number().int().min(1, 'Max backups must be at least 1').optional(),
+     webhookSecret: z.string().optional()
+  }),
+
+  // Empty payload schema for trigger routes
+   emptyPayload: z.object({}).passthrough().optional(),
+ 
+   // Query for file path
+   filePathQuery: z.object({
+     file: z.string().optional(),
+     path: z.string().optional()
+   }).passthrough(),
+ 
+   // Query for directory listing
+   directoryQuery: z.object({
+     directory: z.string().optional()
+   }).passthrough(),
+ 
+   // User allowlist deletion params
+   userAllowlistParam: z.object({
+     id: z.union([z.string(), z.number()]),
+     entryId: z.union([z.string(), z.number()])
+   }),
+ 
+   // User add coins params
+   userAddCoinsParam: z.object({
+     id: z.union([z.string(), z.number()]),
+     coins: z.coerce.number().int()
+   }),
+ 
+   // Platform param
+   platformParam: z.object({
+     platform: z.string().min(1).trim()
+   }),
+ 
+   // Plugin ID param
+   pluginIdParam: z.object({
+     pluginId: z.string().min(1).trim()
+   }),
+ 
+   // Backup download params
+   backupDownloadParam: z.object({
+     id: z.string().min(1),
+     backupId: z.string().min(1)
+   }),
+ 
+   // Plugin search query
+   pluginSearchQuery: z.object({
+     query: z.string().optional(),
+     category: z.string().optional(),
+     platform: z.string().optional(),
+     page: z.coerce.number().optional()
+   }).passthrough(),
+ 
+   // Magic token query
+   magicTokenQuery: z.object({
+     token: z.string().optional()
+   }).passthrough(),
+ 
+   // Discord callback query
+   discordCallbackQuery: z.object({
+     code: z.string().optional(),
+     state: z.string().optional(),
+     error: z.string().optional()
+   }).passthrough(),
+ 
+   // Checkout session query
+   checkoutSessionQuery: z.object({
+     session_id: z.string().optional()
+   }).passthrough(),
+ 
+   // Transaction ID param
+   transactionIdParam: z.object({
+     transactionId: z.union([z.string(), z.number()])
+   }),
+ 
   passkeyAuthVerify: z.object({
     id: z.string().min(1),
     rawId: z.string().min(1),

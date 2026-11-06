@@ -1,3 +1,4 @@
+const { validate, schemas } = require('../handlers/validate');
 const createAuthz = require("../handlers/authz.js");
 
 const HeliactylModule = {
@@ -30,7 +31,7 @@ module.exports.load = async function (app, db) {
   const authz = createAuthz(db);
 
   // GET /api/v5/notifications - Retrieve paginated user notifications
-  app.get("/api/v5/notifications", authz.requireSession, async (req, res) => {
+  app.get("/api/v5/notifications", authz.requireSession, validate(schemas.pagination, "query"), async (req, res) => {
     try {
       const sessionUser = authz.getSessionUser(req);
       const userId = sessionUser?.id;
@@ -95,7 +96,7 @@ module.exports.load = async function (app, db) {
   });
 
   // POST /api/v5/notifications/:id/read - Mark specific notification as read
-  app.post("/api/v5/notifications/:id/read", authz.requireSession, async (req, res) => {
+  app.post("/api/v5/notifications/:id/read", authz.requireSession, validate(schemas.stringIdParam, 'params'), async (req, res) => {
     try {
       const sessionUser = authz.getSessionUser(req);
       const userId = sessionUser?.id;
@@ -122,7 +123,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Backward compatibility alias for /api/notifications/:id/read
-  app.post("/api/notifications/:id/read", authz.requireSession, async (req, res) => {
+  app.post("/api/notifications/:id/read", authz.requireSession, validate(schemas.stringIdParam, 'params'), async (req, res) => {
     try {
       const sessionUser = authz.getSessionUser(req);
       const userId = sessionUser?.id;
@@ -149,7 +150,7 @@ module.exports.load = async function (app, db) {
   });
 
   // POST /api/v5/notifications/read-all - Mark all unread notifications as read
-  app.post("/api/v5/notifications/read-all", authz.requireSession, async (req, res) => {
+  app.post("/api/v5/notifications/read-all", authz.requireSession, validate(schemas.emptyPayload), async (req, res) => {
     try {
       const sessionUser = authz.getSessionUser(req);
       const userId = sessionUser?.id;
@@ -179,7 +180,7 @@ module.exports.load = async function (app, db) {
   });
 
   // DELETE /api/v5/notifications/:id - Delete a notification
-  app.delete("/api/v5/notifications/:id", authz.requireSession, async (req, res) => {
+  app.delete("/api/v5/notifications/:id", authz.requireSession, validate(schemas.stringIdParam, 'params'), async (req, res) => {
     try {
       const sessionUser = authz.getSessionUser(req);
       const userId = sessionUser?.id;

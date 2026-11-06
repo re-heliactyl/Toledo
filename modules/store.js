@@ -422,7 +422,7 @@ module.exports.load = function (app, db) {
     }
   });
 
-  app.get('/api/store/config', async (req, res) => {
+  app.get('/api/store/config', validate(schemas.emptyPayload, 'query'), async (req, res) => {
     try {
       if (!authz.hasUserSession(req)) return res.status(401).json({ error: 'Unauthorized' });
 
@@ -456,7 +456,7 @@ module.exports.load = function (app, db) {
     }
   });
 
-  app.get('/api/afk/config', async (req, res) => {
+  app.get('/api/afk/config', validate(schemas.emptyPayload, 'query'), async (req, res) => {
     try {
       const config = await afkManager.getConfig();
       res.json(config);
@@ -465,7 +465,7 @@ module.exports.load = function (app, db) {
     }
   });
 
-  app.get('/api/admin/afk/config', async (req, res) => {
+  app.get('/api/admin/afk/config', validate(schemas.emptyPayload, 'query'), async (req, res) => {
     if (!await authz.getAdminStatus(req)) {
       return res.status(403).json({ error: 'Forbidden' });
     }
@@ -478,7 +478,7 @@ module.exports.load = function (app, db) {
     }
   });
 
-  app.post('/api/admin/afk/config', async (req, res) => {
+  app.post('/api/admin/afk/config', validate(schemas.emptyPayload), async (req, res) => {
     if (!await authz.getAdminStatus(req)) {
       return res.status(403).json({ error: 'Forbidden' });
     }
@@ -580,7 +580,7 @@ module.exports.load = function (app, db) {
     }
   });
 
-  app.get('/api/store/history', async (req, res) => {
+  app.get('/api/store/history', validate(schemas.emptyPayload, 'query'), async (req, res) => {
     try {
       if (!authz.hasUserSession(req)) return res.status(401).json({ error: 'Unauthorized' });
       const userId = authz.getSessionUser(req).id;
@@ -597,7 +597,7 @@ module.exports.load = function (app, db) {
     }
   });
 
-  app.get('/api/store/resources', async (req, res) => {
+  app.get('/api/store/resources', validate(schemas.emptyPayload, 'query'), async (req, res) => {
     try {
       if (!authz.hasUserSession(req)) return res.status(401).json({ error: 'Unauthorized' });
       const userId = authz.getSessionUser(req).id;

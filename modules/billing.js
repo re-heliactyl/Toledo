@@ -284,7 +284,7 @@ module.exports.load = async function (app, db) {
   router.use(authz.requireSession);
 
   // Get user's balances and purchase options
-  router.get('/billing/info', async (req, res) => {
+  router.get('/billing/info', validate(schemas.emptyPayload, 'query'), async (req, res) => {
     try {
       const userId = authz.getSessionUser(req).id;
       const creditBalance = await billingManager.getCreditBalance(userId);
@@ -329,7 +329,7 @@ module.exports.load = async function (app, db) {
     }
   });
 
-  router.get('/billing/verify-checkout', async (req, res) => {
+  router.get('/billing/verify-checkout', validate(schemas.checkoutSessionQuery, 'query'), async (req, res) => {
     try {
       const { session_id } = req.query;
 
@@ -698,7 +698,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Get transaction history
-  router.get('/billing/transactions', async (req, res) => {
+  router.get('/billing/transactions', validate(schemas.emptyPayload, 'query'), async (req, res) => {
     try {
       const userId = req.session.userinfo.id;
       const transactions = await billingManager.getTransactionHistory(userId);
@@ -717,7 +717,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Get invoices (all 'purchase' type transactions)
-  router.get('/billing/invoices', async (req, res) => {
+  router.get('/billing/invoices', validate(schemas.emptyPayload, 'query'), async (req, res) => {
     try {
       const userId = req.session.userinfo.id;
       const transactions = await billingManager.getTransactionHistory(userId);
@@ -768,7 +768,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Download invoice as PDF
-  router.get('/billing/invoices/:transactionId/download', async (req, res) => {
+  router.get('/billing/invoices/:transactionId/download', validate(schemas.transactionIdParam, 'params'), async (req, res) => {
     try {
       const userId = req.session.userinfo.id;
       const { transactionId } = req.params;
@@ -813,7 +813,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Get coin leaderboard
-  router.get('/billing/leaderboard', async (req, res) => {
+  router.get('/billing/leaderboard', validate(schemas.emptyPayload, 'query'), async (req, res) => {
     try {
       const userId = authz.getSessionUser(req).id;
 

@@ -183,7 +183,7 @@ module.exports.load = async function (app, db) {
   });
 
   // New /api/admin endpoint
-  app.get("/api/admin", async (req, res) => {
+  app.get("/api/admin", validate(schemas.emptyPayload, "query"), async (req, res) => {
     const userPerms = await authz.getUserPermissions(req);
     const hasAdmin = await checkAdmin(req);
     res.json({
@@ -277,7 +277,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Rebuild panel
-  app.post("/api/panel/rebuild", async (req, res) => {
+  app.post("/api/panel/rebuild", validate(schemas.emptyPayload), async (req, res) => {
     if (!await checkAdmin(req, 'admin.settings.manage')) {
       return res.status(403).json({ error: "Unauthorized" });
     }
@@ -319,7 +319,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Get config backups
-  app.get("/api/config/backups", async (req, res) => {
+  app.get("/api/config/backups", validate(schemas.emptyPayload, "query"), async (req, res) => {
     if (!await checkAdmin(req, 'admin.settings.manage')) {
       return res.status(403).json({ error: "Unauthorized" });
     }
@@ -345,7 +345,7 @@ module.exports.load = async function (app, db) {
     }
   });
 
-  app.get("/api/config", async (req, res) => {
+  app.get("/api/config", validate(schemas.emptyPayload, "query"), async (req, res) => {
     if (!await checkAdmin(req, 'admin.settings.manage')) {
       return res.status(403).json({ error: "Unauthorized" });
     }
@@ -359,7 +359,7 @@ module.exports.load = async function (app, db) {
     }
   });
 
-  app.get("/api/settings/sftp", async (req, res) => {
+  app.get("/api/settings/sftp", validate(schemas.emptyPayload, "query"), async (req, res) => {
     if (!await checkAdmin(req, 'admin.settings.manage')) {
       return res.status(403).json({ error: "Unauthorized" });
     }
@@ -397,7 +397,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Get specific backup
-  app.get("/api/config/backups/:file", async (req, res) => {
+  app.get("/api/config/backups/:file", validate(schemas.fileParam, "params"), async (req, res) => {
     if (!await checkAdmin(req)) {
       return res.status(403).json({ error: "Unauthorized" });
     }
@@ -415,7 +415,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Restore from backup
-  app.post("/api/config/backups/:file/restore", async (req, res) => {
+  app.post("/api/config/backups/:file/restore", validate(schemas.fileParam, 'params'), async (req, res) => {
     if (!await checkAdmin(req)) {
       return res.status(403).json({ error: "Unauthorized" });
     }
@@ -460,7 +460,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Delete backup
-  app.delete("/api/config/backups/:file", async (req, res) => {
+  app.delete("/api/config/backups/:file", validate(schemas.fileParam, 'params'), async (req, res) => {
     if (!await checkAdmin(req)) {
       return res.status(403).json({ error: "Unauthorized" });
     }
@@ -495,7 +495,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Check if reboot is needed
-  app.get("/api/reboot/status", async (req, res) => {
+  app.get("/api/reboot/status", validate(schemas.emptyPayload, "query"), async (req, res) => {
     if (!await checkAdmin(req)) {
       return res.status(403).json({ error: "Unauthorized" });
     }
@@ -511,7 +511,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Improved reboot endpoint
-  app.post("/api/reboot", async (req, res) => {
+  app.post("/api/reboot", validate(schemas.emptyPayload), async (req, res) => {
     if (!await checkAdmin(req)) {
       return res.status(403).json({ error: "Unauthorized" });
     }
@@ -569,7 +569,7 @@ module.exports.load = async function (app, db) {
     }
   });
 
-  app.get("/api/radar/nodes", async (req, res) => {
+  app.get("/api/radar/nodes", validate(schemas.emptyPayload, "query"), async (req, res) => {
     if (!await checkAdmin(req)) {
       return res.status(403).json({ error: "Unauthorized" });
     }
@@ -606,7 +606,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Get specific radar node
-  app.get("/api/radar/nodes/:id", async (req, res) => {
+  app.get("/api/radar/nodes/:id", validate(schemas.idParam, "params"), async (req, res) => {
     if (!await checkAdmin(req)) {
       return res.status(403).json({ error: "Unauthorized" });
     }
@@ -712,7 +712,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Delete radar node
-  app.delete("/api/radar/nodes/:id", async (req, res) => {
+  app.delete("/api/radar/nodes/:id", validate(schemas.idParam, 'params'), async (req, res) => {
     if (!await checkAdmin(req, res, settings, db)) {
       return res.status(403).json({ error: "Unauthorized" });
     }
@@ -741,7 +741,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Get analytics across all nodes
-  app.get("/api/radar/analytics", async (req, res) => {
+  app.get("/api/radar/analytics", validate(schemas.emptyPayload, "query"), async (req, res) => {
     if (!await checkAdmin(req, res, settings, db)) {
       return res.status(403).json({ error: "Unauthorized" });
     }
@@ -799,7 +799,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Get detections from a specific node
-  app.get("/api/radar/nodes/:id/detections", async (req, res) => {
+  app.get("/api/radar/nodes/:id/detections", validate(schemas.idParam, "params"), async (req, res) => {
     if (!await checkAdmin(req, res, settings, db)) {
       return res.status(403).json({ error: "Unauthorized" });
     }
@@ -825,7 +825,7 @@ module.exports.load = async function (app, db) {
     }
   });
 
-  app.get("/api/servers", async (req, res) => {
+  app.get("/api/servers", validate(schemas.emptyPayload, "query"), async (req, res) => {
     if (!await checkAdmin(req, res, settings, db)) {
       return res.status(403).json({ error: "Unauthorized" });
     }
@@ -848,7 +848,7 @@ module.exports.load = async function (app, db) {
     }
   });
 
-  app.get("/api/servers/:id", async (req, res) => {
+  app.get("/api/servers/:id", validate(schemas.serverIdParam, "params"), async (req, res) => {
     if (!await checkAdmin(req, res, settings, db)) {
       return res.status(403).json({ error: "Unauthorized" });
     }
@@ -865,7 +865,7 @@ module.exports.load = async function (app, db) {
     }
   });
 
-  app.post("/api/servers/:id/suspend", async (req, res) => {
+  app.post("/api/servers/:id/suspend", validate(schemas.serverIdParam, 'params'), async (req, res) => {
     if (!await checkAdmin(req, res, settings, db)) {
       return res.status(403).json({ error: "Unauthorized" });
     }
@@ -879,7 +879,7 @@ module.exports.load = async function (app, db) {
     }
   });
 
-  app.post("/api/servers/:id/unsuspend", async (req, res) => {
+  app.post("/api/servers/:id/unsuspend", validate(schemas.serverIdParam, 'params'), async (req, res) => {
     if (!await checkAdmin(req, res, settings, db)) {
       return res.status(403).json({ error: "Unauthorized" });
     }
@@ -893,7 +893,7 @@ module.exports.load = async function (app, db) {
     }
   });
 
-  app.delete("/api/servers/:id", async (req, res) => {
+  app.delete("/api/servers/:id", validate(schemas.serverIdParam, 'params'), async (req, res) => {
     if (!await checkAdmin(req, res, settings, db)) {
       return res.status(403).json({ error: "Unauthorized" });
     }
@@ -920,7 +920,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Nests endpoints
-  app.get("/api/nests", async (req, res) => {
+  app.get("/api/nests", validate(schemas.emptyPayload, "query"), async (req, res) => {
     if (!await checkAdmin(req, res, settings, db)) {
       return res.status(403).json({ error: "Unauthorized" });
     }
@@ -936,7 +936,7 @@ module.exports.load = async function (app, db) {
     }
   });
 
-  app.get("/api/nests/:id/eggs", async (req, res) => {
+  app.get("/api/nests/:id/eggs", validate(schemas.idParam, "params"), async (req, res) => {
     if (!await checkAdmin(req, res, settings, db)) {
       return res.status(403).json({ error: "Unauthorized" });
     }
@@ -957,7 +957,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Users endpoints
-  app.get("/api/users", async (req, res) => {
+  app.get("/api/users", validate(schemas.emptyPayload, "query"), async (req, res) => {
     if (!await checkAdmin(req, res, settings, db)) {
       return res.status(403).json({ error: "Unauthorized" });
     }
@@ -973,7 +973,7 @@ module.exports.load = async function (app, db) {
     }
   });
 
-  app.get("/api/users/:id", async (req, res) => {
+  app.get("/api/users/:id", validate(schemas.userIdParam, "params"), async (req, res) => {
     if (!await checkAdmin(req, res, settings, db)) {
       return res.status(403).json({ error: "Unauthorized" });
     }
@@ -1039,7 +1039,7 @@ module.exports.load = async function (app, db) {
     }
   });
 
-  app.delete("/api/users/:id", async (req, res) => {
+  app.delete("/api/users/:id", validate(schemas.userIdParam, 'params'), async (req, res) => {
     if (!await checkAdmin(req, res, settings, db)) {
       return res.status(403).json({ error: "Unauthorized" });
     }
@@ -1059,7 +1059,7 @@ module.exports.load = async function (app, db) {
     }
   });
 
-  app.get("/api/users/:id/anti-vpn-allowlist", async (req, res) => {
+  app.get("/api/users/:id/anti-vpn-allowlist", validate(schemas.userIdParam, "params"), async (req, res) => {
     if (!await checkAdmin(req)) {
       return res.status(403).json({ error: "Unauthorized" });
     }
@@ -1205,7 +1205,7 @@ module.exports.load = async function (app, db) {
     }
   });
 
-  app.delete("/api/users/:id/anti-vpn-allowlist/:entryId", adminWriteRateLimit, async (req, res) => {
+  app.delete("/api/users/:id/anti-vpn-allowlist/:entryId", validate(schemas.userAllowlistParam, 'params'), adminWriteRateLimit, async (req, res) => {
     if (!await checkAdmin(req)) {
       return res.status(403).json({ error: "Unauthorized" });
     }
@@ -1267,7 +1267,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Nodes endpoints
-  app.get("/api/nodes", async (req, res) => {
+  app.get("/api/nodes", validate(schemas.emptyPayload, "query"), async (req, res) => {
     if (!await checkAdmin(req, res, settings, db)) {
       return res.status(403).json({ error: "Unauthorized" });
     }
@@ -1283,7 +1283,7 @@ module.exports.load = async function (app, db) {
     }
   });
 
-  app.get("/api/nodes/:id", async (req, res) => {
+  app.get("/api/nodes/:id", validate(schemas.idParam, "params"), async (req, res) => {
     if (!await checkAdmin(req, res, settings, db)) {
       return res.status(403).json({ error: "Unauthorized" });
     }
@@ -1301,7 +1301,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Get node configuration details
-  app.get("/api/nodes/:id/configuration", async (req, res) => {
+  app.get("/api/nodes/:id/configuration", validate(schemas.idParam, "params"), async (req, res) => {
     if (!await checkAdmin(req, res, settings, db)) {
       return res.status(403).json({ error: "Unauthorized" });
     }
@@ -1319,7 +1319,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Get multiple users' coins in bulk (MUST be before /api/users/:id/coins)
-  app.get("/api/users/bulk/coins", async (req, res) => {
+  app.get("/api/users/bulk/coins", validate(schemas.emptyPayload, "query"), async (req, res) => {
     if (!await authz.getAdminStatus(req)) {
       return res.status(403).json({ error: "Unauthorized" });
     }
@@ -1353,7 +1353,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Get multiple users' resources in bulk (MUST be before /api/users/:id/resources)
-  app.get("/api/users/bulk/resources", async (req, res) => {
+  app.get("/api/users/bulk/resources", validate(schemas.emptyPayload, "query"), async (req, res) => {
     if (!await authz.getAdminStatus(req)) {
       return res.status(403).json({ error: "Unauthorized" });
     }
@@ -1391,7 +1391,7 @@ module.exports.load = async function (app, db) {
     }
   });
 
-  app.get("/api/users/bulk/ban-status", async (req, res) => {
+  app.get("/api/users/bulk/ban-status", validate(schemas.emptyPayload, "query"), async (req, res) => {
     if (!await authz.getAdminStatus(req)) {
       return res.status(403).json({ error: "Unauthorized" });
     }
@@ -1437,7 +1437,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Get discord ID map for all users (used for admin search by discord ID)
-  app.get("/api/users/bulk/discord-ids", async (req, res) => {
+  app.get("/api/users/bulk/discord-ids", validate(schemas.emptyPayload, "query"), async (req, res) => {
     if (!await authz.getAdminStatus(req)) {
       return res.status(403).json({ error: "Unauthorized" });
     }
@@ -1460,7 +1460,7 @@ module.exports.load = async function (app, db) {
     }
   });
 
-  app.get("/api/users/:id/ban", async (req, res) => {
+  app.get("/api/users/:id/ban", validate(schemas.userIdParam, "params"), async (req, res) => {
     if (!await authz.getAdminStatus(req)) {
       return res.status(403).json({ error: "Unauthorized" });
     }
@@ -1539,7 +1539,7 @@ module.exports.load = async function (app, db) {
     }
   });
 
-  app.delete("/api/users/:id/ban", adminWriteRateLimit, async (req, res) => {
+  app.delete("/api/users/:id/ban", validate(schemas.userIdParam, 'params'), adminWriteRateLimit, async (req, res) => {
     if (!await authz.hasPermission(req, 'admin.users.ban')) {
       return res.status(403).json({ error: "Unauthorized" });
     }
@@ -1589,7 +1589,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Get user coins
-  app.get("/api/users/:id/coins", async (req, res) => {
+  app.get("/api/users/:id/coins", validate(schemas.userIdParam, "params"), async (req, res) => {
     if (!await authz.getAdminStatus(req)) {
       return res.status(403).json({ error: "Unauthorized" });
     }
@@ -1613,7 +1613,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Get user resources
-  app.get("/api/users/:id/resources", async (req, res) => {
+  app.get("/api/users/:id/resources", validate(schemas.userIdParam, "params"), async (req, res) => {
     if (!await authz.getAdminStatus(req)) {
       return res.status(403).json({ error: "Unauthorized" });
     }
@@ -1641,7 +1641,7 @@ module.exports.load = async function (app, db) {
     }
   });
 
-  app.get("/api/users/:id/addcoins/:coins", adminWriteRateLimit, async (req, res) => {
+  app.get("/api/users/:id/addcoins/:coins", validate(schemas.userAddCoinsParam, 'params'), adminWriteRateLimit, async (req, res) => {
     if (!await authz.hasPermission(req, 'admin.users.manage')) {
       return res.status(403).json({ error: "Unauthorized" });
     }
@@ -1749,7 +1749,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Config management endpoints
-  app.get("/api/config/raw", async (req, res) => {
+  app.get("/api/config/raw", validate(schemas.emptyPayload, "query"), async (req, res) => {
     if (!await authz.getAdminStatus(req)) {
       return res.status(403).json({ error: "Unauthorized" });
     }
@@ -1764,7 +1764,7 @@ module.exports.load = async function (app, db) {
     }
   });
 
-  app.post("/api/config/raw", express.text(), async (req, res) => {
+  app.post("/api/config/raw", validate(schemas.emptyPayload), express.text(), async (req, res) => {
     if (!await authz.getAdminStatus(req)) {
       return res.status(403).json({ error: "Unauthorized" });
     }
@@ -1826,7 +1826,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Reboot management endpoints
-  app.get("/api/reboot/status", async (req, res) => {
+  app.get("/api/reboot/status", validate(schemas.emptyPayload, 'query'), async (req, res) => {
     if (!await checkAdminStatus(req, res, settings, db)) {
       return res.status(403).json({ error: "Unauthorized" });
     }
@@ -1834,7 +1834,7 @@ module.exports.load = async function (app, db) {
     res.json({ needsReboot: configNeedsReboot });
   });
 
-  app.post("/api/reboot", async (req, res) => {
+  app.post("/api/reboot", validate(schemas.emptyPayload), async (req, res) => {
     if (!await authz.getAdminStatus(req)) {
       return res.status(403).json({ error: "Unauthorized" });
     }
@@ -1853,7 +1853,7 @@ module.exports.load = async function (app, db) {
 
   // Platform Statistics endpoint - accessible to all authenticated users
   // Should be other place than admin modules because all users need access to it, not just admins
-  app.get("/api/stats", async (req, res) => {
+  app.get("/api/stats", validate(schemas.emptyPayload, "query"), async (req, res) => {
     if (!req.session.pterodactyl) {
       return res.status(401).json({ error: "Unauthorized" });
     }

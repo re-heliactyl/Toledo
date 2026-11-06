@@ -130,7 +130,7 @@ module.exports.load = async function (app, db) {
    * GET /api/eggs
    * Get all enabled eggs for server creation (public, requires auth)
    */
-  router.get('/eggs', async (req, res) => {
+  router.get('/eggs', validate(schemas.emptyPayload, 'query'), async (req, res) => {
     try {
       if (!req.session.pterodactyl) {
         return res.status(401).json({ error: 'Unauthorized' });
@@ -197,7 +197,7 @@ module.exports.load = async function (app, db) {
    * GET /api/eggs/categories
    * Get all categories
    */
-  router.get('/eggs/categories', async (req, res) => {
+  router.get('/eggs/categories', validate(schemas.emptyPayload, 'query'), async (req, res) => {
     try {
       if (!req.session.pterodactyl) {
         return res.status(401).json({ error: 'Unauthorized' });
@@ -219,7 +219,7 @@ module.exports.load = async function (app, db) {
    * GET /api/admin/eggs
    * Get all eggs with full configuration (admin only)
    */
-  router.get('/admin/eggs', async (req, res) => {
+  router.get('/admin/eggs', validate(schemas.emptyPayload, 'query'), async (req, res) => {
     if (!await checkAdminStatus(req, res, db)) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
@@ -245,7 +245,7 @@ module.exports.load = async function (app, db) {
    * POST /api/admin/eggs/sync
    * Sync eggs from Pterodactyl panel
    */
-  router.post('/admin/eggs/sync', async (req, res) => {
+  router.post('/admin/eggs/sync', validate(schemas.emptyPayload), async (req, res) => {
     if (!await checkAdminStatus(req, res, db)) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
@@ -480,7 +480,7 @@ module.exports.load = async function (app, db) {
    * PATCH /api/admin/eggs/:id/toggle
    * Quick toggle egg enabled status
    */
-  router.patch('/admin/eggs/:id/toggle', async (req, res) => {
+  router.patch('/admin/eggs/:id/toggle', validate(schemas.idParam, 'params'), async (req, res) => {
     if (!await checkAdminStatus(req, res, db)) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
@@ -520,7 +520,7 @@ module.exports.load = async function (app, db) {
    * PATCH /api/admin/eggs/:id/toggle-gold
    * Toggle egg goldOnly (God Pack only) status
    */
-  router.patch('/admin/eggs/:id/toggle-gold', async (req, res) => {
+  router.patch('/admin/eggs/:id/toggle-gold', validate(schemas.idParam, 'params'), async (req, res) => {
     if (!await checkAdminStatus(req, res, db)) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
@@ -623,7 +623,7 @@ module.exports.load = async function (app, db) {
    * GET /api/admin/eggs/categories
    * Get all categories (admin)
    */
-  router.get('/admin/eggs/categories', async (req, res) => {
+  router.get('/admin/eggs/categories', validate(schemas.emptyPayload, 'query'), async (req, res) => {
     if (!await checkAdminStatus(req, res, db)) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
@@ -740,7 +740,7 @@ module.exports.load = async function (app, db) {
    * DELETE /api/admin/eggs/categories/:id
    * Delete a category (eggs will be moved to 'other')
    */
-  router.delete('/admin/eggs/categories/:id', async (req, res) => {
+  router.delete('/admin/eggs/categories/:id', validate(schemas.idParam, 'params'), async (req, res) => {
     if (!await checkAdminStatus(req, res, db)) {
       return res.status(403).json({ error: 'Unauthorized' });
     }

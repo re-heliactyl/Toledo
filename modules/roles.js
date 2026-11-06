@@ -1,3 +1,4 @@
+const { validate, schemas } = require('../handlers/validate');
 const express = require('express');
 const createAuthz = require('../handlers/authz');
 const { PERMISSION_CATEGORIES, ALL_PERMISSION_KEYS, isValidPermission } = require('../handlers/permissions');
@@ -27,7 +28,7 @@ async function load(app, db) {
    * GET /api/admin/permissions
    * Return canonical permission categories and metadata
    */
-  router.get('/admin/permissions', authz.requirePermission('admin.roles.manage'), (req, res) => {
+  router.get('/admin/permissions', authz.requirePermission('admin.roles.manage'), validate(schemas.emptyPayload, 'query'), (req, res) => {
     return res.json({
       categories: PERMISSION_CATEGORIES,
       allKeys: ALL_PERMISSION_KEYS,
@@ -38,7 +39,7 @@ async function load(app, db) {
    * GET /api/admin/roles
    * List all roles with user counts
    */
-  router.get('/admin/roles', authz.requirePermission('admin.roles.manage'), async (req, res) => {
+  router.get('/admin/roles', authz.requirePermission('admin.roles.manage'), validate(schemas.emptyPayload, 'query'), async (req, res) => {
     try {
       const roles = await db.role.findMany({
         orderBy: { priority: 'desc' },
@@ -78,7 +79,7 @@ async function load(app, db) {
    * POST /api/admin/roles
    * Create a new custom role
    */
-  router.post('/admin/roles', authz.requirePermission('admin.roles.manage'), async (req, res) => {
+  router.post('/admin/roles', authz.requirePermission('admin.roles.manage'), validate(schemas.roleCreate), async (req, res) => {
     try {
       const { name, description, color, priority, permissions } = req.body;
 
@@ -121,7 +122,7 @@ async function load(app, db) {
    * PATCH /api/admin/roles/:id
    * Update an existing role
    */
-  router.patch('/admin/roles/:id', authz.requirePermission('admin.roles.manage'), async (req, res) => {
+  router.patch('/admin/roles/:id', authz.requirePermission('admin.roles.manage'), validate(schemas.roleUpdate), async (req, res) => {
     try {
       const { id } = req.params;
       const { name, description, color, priority, permissions } = req.body;
@@ -194,7 +195,7 @@ async function load(app, db) {
    * DELETE /api/admin/roles/:id
    * Delete a custom role
    */
-  router.delete('/admin/roles/:id', authz.requirePermission('admin.roles.manage'), async (req, res) => {
+  router.delete('/admin/roles/:id', authz.requirePermission('admin.roles.manage'), validate(schemas.idParam, 'params'), async (req, res) => {
     try {
       const { id } = req.params;
 
@@ -220,7 +221,7 @@ async function load(app, db) {
    * GET /api/admin/users/:id/roles
    * Fetch roles assigned to a user
    */
-  router.get('/admin/users/:id/roles', authz.requirePermission('admin.roles.manage'), async (req, res) => {
+  router.get('/admin/users/:id/roles', authz.requirePermission('admin.roles.manage'), validate(schemas.idParam, 'params'), async (req, res) => {
     try {
       const { id } = req.params;
 
@@ -253,7 +254,7 @@ async function load(app, db) {
    * POST /api/admin/users/:id/roles
    * Update roles assigned to a user (takes array of roleIds)
    */
-  router.post('/admin/users/:id/roles', authz.requirePermission('admin.roles.manage'), async (req, res) => {
+  router.post('/admin/users/:id/roles', authz.requirePermission('admin.roles.manage'), validate(schemas.userRolesUpdate), async (req, res) => {
     try {
       const { id } = req.params;
       const { roleIds } = req.body;

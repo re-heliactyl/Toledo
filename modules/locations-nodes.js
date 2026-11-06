@@ -242,7 +242,7 @@ module.exports.load = async function (app, db) {
   const router = express.Router();
 
   // Public endpoint - counts of enabled locations and nodes
-  router.get('/locations', async (req, res) => {
+  router.get('/locations', validate(schemas.emptyPayload, 'query'), async (req, res) => {
     try {
       const [locations, nodes] = await Promise.all([
         db.locationConfig.count({ where: { enabled: true } }),
@@ -256,7 +256,7 @@ module.exports.load = async function (app, db) {
     }
   });
 
-  router.get('/admin/locations-nodes', async (req, res) => {
+  router.get('/admin/locations-nodes', validate(schemas.emptyPayload, 'query'), async (req, res) => {
     if (!await checkAdminStatus(req, res, db)) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
@@ -299,7 +299,7 @@ module.exports.load = async function (app, db) {
     }
   });
 
-  router.post('/admin/locations-nodes/sync', async (req, res) => {
+  router.post('/admin/locations-nodes/sync', validate(schemas.emptyPayload), async (req, res) => {
     if (!await checkAdminStatus(req, res, db, 'admin.nodes.manage')) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
@@ -371,7 +371,7 @@ module.exports.load = async function (app, db) {
     }
   });
 
-  router.patch('/admin/locations/:id/toggle', async (req, res) => {
+  router.patch('/admin/locations/:id/toggle', validate(schemas.idParam, 'params'), async (req, res) => {
     if (!await checkAdminStatus(req, res, db, 'admin.nodes.edit')) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
@@ -427,7 +427,7 @@ module.exports.load = async function (app, db) {
     }
   });
 
-  router.patch('/admin/nodes/:id/toggle', async (req, res) => {
+  router.patch('/admin/nodes/:id/toggle', validate(schemas.idParam, 'params'), async (req, res) => {
     if (!await checkAdminStatus(req, res, db, 'admin.nodes.edit')) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
@@ -452,7 +452,7 @@ module.exports.load = async function (app, db) {
     }
   });
 
-  router.patch('/admin/nodes/:id/toggle-gold', async (req, res) => {
+  router.patch('/admin/nodes/:id/toggle-gold', validate(schemas.idParam, 'params'), async (req, res) => {
     if (!await checkAdminStatus(req, res, db, 'admin.nodes.edit')) {
       return res.status(403).json({ error: 'Unauthorized' });
     }

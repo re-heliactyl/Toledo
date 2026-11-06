@@ -22,15 +22,9 @@ global.fetch = () => {
 // Mock Express app and db
 const routes = {};
 const mockApp = {
-  get(path, middleware, handler) {
-    routes[`GET ${path}`] = { middleware, handler: handler || middleware };
-  },
-  post(path, middleware, handler) {
-    routes[`POST ${path}`] = { middleware, handler: handler || middleware };
-  },
-  delete(path, middleware, handler) {
-    routes[`DELETE ${path}`] = { middleware, handler: handler || middleware };
-  },
+  get(path, ...handlers) { routes[`GET ${path}`] = { middleware: handlers.slice(0, -1), handler: handlers[handlers.length - 1] }; },
+  post(path, ...handlers) { routes[`POST ${path}`] = { middleware: handlers.slice(0, -1), handler: handlers[handlers.length - 1] }; },
+  delete(path, ...handlers) { routes[`DELETE ${path}`] = { middleware: handlers.slice(0, -1), handler: handlers[handlers.length - 1] }; },
   sessionStore: {
     get(sid, cb) { cb(null, null); },
     destroy(sid, cb) { cb(null); }

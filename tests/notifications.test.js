@@ -10,15 +10,9 @@ console.log("✔ Manifest validation passed");
 // Mock Express app and db
 const routes = {};
 const mockApp = {
-  get(path, middleware, handler) {
-    routes[`GET ${path}`] = { middleware, handler };
-  },
-  post(path, middleware, handler) {
-    routes[`POST ${path}`] = { middleware, handler };
-  },
-  delete(path, middleware, handler) {
-    routes[`DELETE ${path}`] = { middleware, handler };
-  }
+  get(path, ...handlers) { routes['GET ' + path] = { middleware: handlers.slice(0, -1), handler: handlers[handlers.length - 1] }; },
+  post(path, ...handlers) { routes['POST ' + path] = { middleware: handlers.slice(0, -1), handler: handlers[handlers.length - 1] }; },
+  delete(path, ...handlers) { routes['DELETE ' + path] = { middleware: handlers.slice(0, -1), handler: handlers[handlers.length - 1] }; }
 };
 
 let notificationsStore = [

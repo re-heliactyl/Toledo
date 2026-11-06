@@ -1,3 +1,4 @@
+const { validate, schemas } = require('../handlers/validate');
 const express = require('express');
 const loadConfig = require("../handlers/config.js");
 const settings = loadConfig("./config.toml");
@@ -652,7 +653,7 @@ module.exports.load = function (app, db) {
   const authz = createAuthz(db);
   app.bundleManager = mgr;
 
-  app.get('/api/bundles/status', async (req, res) => {
+  app.get('/api/bundles/status', validate(schemas.emptyPayload, 'query'), async (req, res) => {
     try {
       if (!authz.hasUserSession(req)) return res.status(401).json({ error: 'Unauthorized' });
       const uid = authz.getSessionUser(req).id;
@@ -664,7 +665,7 @@ module.exports.load = function (app, db) {
     } catch (e) { res.status(500).json({ error: 'Internal server error' }); }
   });
 
-  app.post('/api/bundles/create-checkout', async (req, res) => {
+  app.post('/api/bundles/create-checkout', validate(schemas.bundleCheckout), async (req, res) => {
     try {
       if (!authz.hasUserSession(req)) return res.status(401).json({ error: 'Unauthorized' });
       const su = authz.getSessionUser(req);
@@ -679,7 +680,7 @@ module.exports.load = function (app, db) {
     }
   });
 
-  app.get('/api/bundles/verify-checkout', async (req, res) => {
+  app.get('/api/bundles/verify-checkout', validate(schemas.checkoutSessionQuery, 'query'), async (req, res) => {
     try {
       if (!authz.hasUserSession(req)) return res.status(401).json({ error: 'Unauthorized' });
       const { session_id } = req.query;
@@ -694,7 +695,7 @@ module.exports.load = function (app, db) {
   });
 
   // GET /api/bundles/portal - Stripe Customer Portal for managing subscriptions
-  app.get('/api/bundles/portal', async (req, res) => {
+  app.get('/api/bundles/portal', validate(schemas.emptyPayload, 'query'), async (req, res) => {
     try {
       if (!authz.hasUserSession(req)) return res.status(401).json({ error: 'Unauthorized' });
 
@@ -720,7 +721,7 @@ module.exports.load = function (app, db) {
     }
   });
 
-  app.post('/api/bundles/stripe-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  app.post('/api/bundles/stripe-webhook', validate(schemas.emptyPayload), express.raw({ type: 'application/json' }), async (req, res) => {
     try {
       const whSecret = settings?.api?.client?.stripe?.webhook_secret;
       if (!whSecret || typeof whSecret !== 'string' || whSecret.trim() === '') {

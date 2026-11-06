@@ -1,3 +1,4 @@
+const { validate, schemas } = require('../../handlers/validate');
 const express = require('express');
 const axios = require('axios');
 const loadConfig = require('../../handlers/config');
@@ -113,7 +114,7 @@ module.exports.load = async function (app, db) {
     const router = express.Router();
     const authz = createAuthz(db);
 
-    router.get('/subdomains/domains', async (req, res) => {
+    router.get('/subdomains/domains', validate(schemas.emptyPayload, 'query'), async (req, res) => {
         try {
             const domains = (settings.cloudflare?.domains || [])
                 .filter(d => d.enabled)
@@ -130,7 +131,7 @@ module.exports.load = async function (app, db) {
         }
     });
 
-    router.get('/server/:id/subdomains', authz.requirePterodactylSession, ownsServer, async (req, res) => {
+    router.get('/server/:id/subdomains', authz.requirePterodactylSession, ownsServer, validate(schemas.serverIdParam, 'params'), async (req, res) => {
         try {
             const subdomains = await db.serverSubdomain.findMany({
                 where: { serverId: req.params.id }
@@ -143,7 +144,7 @@ module.exports.load = async function (app, db) {
         }
     });
 
-    router.post('/server/:id/subdomains', authz.requirePterodactylSession, ownsServer, async (req, res) => {
+    router.post('/server/:id/subdomains', authz.requirePterodactylSession, ownsServer, validate(schemas.subdomainCreate), async (req, res) => {
         try {
             const sessionUser = authz.getSessionUser(req);
             const serverId = req.params.id;
@@ -256,7 +257,7 @@ module.exports.load = async function (app, db) {
         }
     });
 
-    router.delete('/server/:id/subdomains/:subdomainId', authz.requirePterodactylSession, ownsServer, async (req, res) => {
+    router.delete('/server/:id/subdomains/:subdomainId', authz.requirePterodactylSession, ownsServer, validate(schemas.subdomainIdParam, 'params'), async (req, res) => {
         try {
             const serverId = req.params.id;
             const subdomainId = req.params.subdomainId;

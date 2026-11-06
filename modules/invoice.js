@@ -1,3 +1,4 @@
+const { validate, schemas } = require('../handlers/validate');
 let puppeteer;
 try {
   puppeteer = require('puppeteer');

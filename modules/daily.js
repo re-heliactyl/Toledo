@@ -597,7 +597,7 @@ module.exports.load = function (app, db) {
   // ==== API ENDPOINTS ====
 
   // Get claim status
-  app.get('/api/daily-rewards/status', async (req, res) => {
+  app.get('/api/daily-rewards/status', validate(schemas.emptyPayload, 'query'), async (req, res) => {
     try {
       if (!authz.hasUserSession(req)) return res.status(401).json({ error: 'Unauthorized' });
 
@@ -612,7 +612,7 @@ module.exports.load = function (app, db) {
   });
 
   // Claim daily reward
-  app.post('/api/daily-rewards/claim', async (req, res) => {
+  app.post('/api/daily-rewards/claim', validate(schemas.emptyPayload), async (req, res) => {
     try {
       if (!authz.hasUserSession(req)) return res.status(401).json({ error: 'Unauthorized' });
 
@@ -655,7 +655,7 @@ module.exports.load = function (app, db) {
   });
 
   // Get streak leaderboard
-  app.get('/api/daily-rewards/leaderboard', async (req, res) => {
+  app.get('/api/daily-rewards/leaderboard', validate(schemas.emptyPayload, 'query'), async (req, res) => {
     try {
       const limit = req.query.limit ? parseInt(req.query.limit) : 10;
       const leaderboard = await dailyRewardsManager.getStreakLeaderboard(limit);
@@ -668,7 +668,7 @@ module.exports.load = function (app, db) {
   });
 
   // Get claim history
-  app.get('/api/daily-rewards/history', async (req, res) => {
+  app.get('/api/daily-rewards/history', validate(schemas.emptyPayload, 'query'), async (req, res) => {
     try {
       if (!authz.hasUserSession(req)) return res.status(401).json({ error: 'Unauthorized' });
 

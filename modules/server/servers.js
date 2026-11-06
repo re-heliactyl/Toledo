@@ -160,7 +160,7 @@ module.exports.load = async function (app, db) {
     // Middleware to check authentication
     router.use(authz.requirePterodactylSession);
 
-    router.get('/eggs', async (req, res) => {
+    router.get('/eggs', validate(schemas.emptyPayload, 'query'), async (req, res) => {
         try {
             const sessionUser = authz.getSessionUser(req);
             // Get package name for restriction checking (with cache)
@@ -222,7 +222,7 @@ module.exports.load = async function (app, db) {
     });
 
     // GET /api/locations - List all available locations
-    router.get('/locations', async (req, res) => {
+    router.get('/locations', validate(schemas.emptyPayload, 'query'), async (req, res) => {
         try {
             const sessionUser = authz.getSessionUser(req);
             const userRecord = await db.user.findUnique({ where: { id: sessionUser.id }, select: { packageName: true } });
@@ -278,7 +278,7 @@ module.exports.load = async function (app, db) {
     });
 
     // GET /api/v5/nodes - List all available nodes
-    router.get('/nodes', async (req, res) => {
+    router.get('/nodes', validate(schemas.emptyPayload, 'query'), async (req, res) => {
         try {
             if (!getNodesFromDB) {
                 return res.json([]);
@@ -312,7 +312,7 @@ module.exports.load = async function (app, db) {
     });
 
     // GET /api/resources - Get user's resource usage and limits
-    router.get('/resources', async (req, res) => {
+    router.get('/resources', validate(schemas.emptyPayload, 'query'), async (req, res) => {
         try {
             const sessionUser = authz.getSessionUser(req);
             // Get package information (with cache)
@@ -372,7 +372,7 @@ module.exports.load = async function (app, db) {
     });
 
     // GET /api/servers - List all servers
-    router.get('/servers', async (req, res) => {
+    router.get('/servers', validate(schemas.emptyPayload, 'query'), async (req, res) => {
         try {
             const sessionUser = authz.getSessionUser(req);
             const user = await cache.getOrSet(
@@ -397,7 +397,7 @@ module.exports.load = async function (app, db) {
 
     // GET /api/v5/server/:id - Get specific server
     
-    router.get('/server/:id', ownsServer, async (req, res) => {
+    router.get('/server/:id', validate(schemas.serverIdParam, 'params'), ownsServer, async (req, res) => {
         try {
             const sessionUser = authz.getSessionUser(req);
             const pteroUser = authz.getPterodactylUser(req);
@@ -907,7 +907,7 @@ module.exports.load = async function (app, db) {
     });
 
     // DELETE /api/v5/servers/:idOrIdentifier - Delete server
-    router.delete('/servers/:idOrIdentifier', isServerOwner, async (req, res) => {
+    router.delete('/servers/:idOrIdentifier', isServerOwner, validate(schemas.stringIdParam, 'params'), async (req, res) => {
         try {
             const sessionUser = authz.getSessionUser(req);
 
@@ -1008,7 +1008,7 @@ module.exports.load = async function (app, db) {
     });
 
     // Proxy endpoint for Minecraft server status API (avoids CORS issues)
-    router.get('/server/:id/minecraft-status', async (req, res) => {
+    router.get('/server/:id/minecraft-status', validate(schemas.serverIdParam, 'params'), async (req, res) => {
         try {
             const serverId = req.params.id;
             const sessionUser = authz.getSessionUser(req);

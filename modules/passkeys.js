@@ -60,7 +60,7 @@ module.exports.load = async function (app, db) {
   const expectedOrigin = settings.website.domain;
 
   // Get passkey status
-  app.get('/api/passkey/status', authz.requireSession, async (req, res) => {
+  app.get('/api/passkey/status', validate(schemas.emptyPayload, 'query'), authz.requireSession, async (req, res) => {
     try {
       const userId = authz.getSessionUser(req).id;
       const user = await db.user.findUnique({
@@ -210,7 +210,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Remove a passkey
-  app.delete('/api/passkey/:id', authz.requireSession, async (req, res) => {
+  app.delete('/api/passkey/:id', validate(schemas.idParam, 'params'), authz.requireSession, async (req, res) => {
     try {
       const userId = authz.getSessionUser(req).id;
       const passkeyId = req.params.id;
@@ -258,7 +258,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Generate authentication options (for login)
-  app.get('/auth/passkey/options', async (req, res) => {
+  app.get('/auth/passkey/options', validate(schemas.emptyPayload, 'query'), async (req, res) => {
     try {
       // Generate authentication options with relaxed verification requirements
       const options = await generateAuthenticationOptions({

@@ -39,7 +39,7 @@ module.exports.load = async function (app, db) {
     const router = express.Router();
 
     // POST Reinstall server
-    router.post('/server/:id/reinstall', isAuthenticated, isServerOwner, async (req, res) => {
+    router.post('/server/:id/reinstall', isAuthenticated, isServerOwner, validate(schemas.serverIdParam, 'params'), async (req, res) => {
         try {
             const serverId = req.params.id;
             await axios.post(`${settings.pterodactyl.domain}/api/client/servers/${serverId}/settings/reinstall`, {}, {

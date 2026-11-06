@@ -121,7 +121,7 @@ module.exports.load = async function (app, _db) {
   const authz = createAuthz(_db);
 
   // GET /api/server/:id/users - List users
-  router.get('/server/:id/users', isAuthenticated, ownsServer, async (req, res) => {
+  router.get('/server/:id/users', isAuthenticated, ownsServer, validate(schemas.serverIdParam, 'params'), async (req, res) => {
     try {
       const serverId = req.params.id;
       const response = await axios.get(
@@ -209,7 +209,7 @@ module.exports.load = async function (app, _db) {
   });
 
   // DELETE /api/server/:id/users/:userId - Delete user
-  router.delete('/server/:id/users/:userId', isAuthenticated, ownsServer, async (req, res) => {
+  router.delete('/server/:id/users/:userId', isAuthenticated, ownsServer, validate(schemas.serverIdParam, 'params'), async (req, res) => {
     try {
       const { id: serverId, userId } = req.params;
       await axios.delete(

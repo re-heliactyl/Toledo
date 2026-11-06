@@ -1,3 +1,4 @@
+const { validate, schemas } = require('../handlers/validate');
 const createAuthz = require('../handlers/authz');
 
 const HeliactylModule = {
@@ -32,7 +33,7 @@ module.exports.HeliactylModule = HeliactylModule;
 module.exports.load = async function (app, db) {
   const authz = createAuthz(db);
 
-  app.post('/generate', async (req, res) => {
+  app.post('/generate', validate(schemas.referralGenerate), async (req, res) => {
     if (!authz.hasUserSession(req)) return res.redirect("/login");
     if (!authz.hasPterodactylSession(req)) return res.redirect("/login");
     const sessionUser = authz.getSessionUser(req);
@@ -81,7 +82,7 @@ module.exports.load = async function (app, db) {
     res.json({ success: "Referral code created" });
   });
 
-  app.post('/claim', async (req, res) => {
+  app.post('/claim', validate(schemas.referralClaim), async (req, res) => {
     if (!authz.hasUserSession(req)) return res.redirect("/login");
     if (!authz.hasPterodactylSession(req)) return res.redirect("/login");
     const sessionUser = authz.getSessionUser(req);

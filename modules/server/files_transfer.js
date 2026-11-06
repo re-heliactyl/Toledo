@@ -43,7 +43,7 @@ module.exports.load = async function (app, db) {
   const router = express.Router();
 
   // GET /api/server/:id/files/upload
-  router.get("/server/:id/files/upload", isAuthenticated, requireServerPermission("file.create"), async (req, res) => {
+  router.get("/server/:id/files/upload", validate(schemas.serverIdParam, 'params'), isAuthenticated, requireServerPermission("file.create"), async (req, res) => {
     try {
       const serverId = req.params.id;
       const directory = req.query.directory || "/";

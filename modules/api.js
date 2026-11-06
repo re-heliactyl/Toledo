@@ -1,3 +1,4 @@
+const { validate, schemas } = require('../handlers/validate');
 const { removeServerSubdomains } = require('./server/subdomains.js');
 const { removeServerRenewal } = require('./server/renewals.js');
 const { invalidateOwnershipCache } = require('./server/core.js');
@@ -168,7 +169,7 @@ module.exports.HeliactylModule = HeliactylModule;
 module.exports.load = async function (app, db) {
   const authz = createAuthz(db);
 
-  app.get('/api/v5/state', async (req, res) => {
+  app.get('/api/v5/state', validate(schemas.emptyPayload, 'query'), async (req, res) => {
     try {
       if (!authz.hasUserSession(req)) {
         return res.status(401).json({
@@ -226,11 +227,11 @@ module.exports.load = async function (app, db) {
     }
   });
 
-  app.get("/api/v5/settings", async (req, res) => {
+  app.get("/api/v5/settings", validate(schemas.emptyPayload, "query"), async (req, res) => {
     res.json(getPublicSettings());
   });
 
-  app.get("/api/v5/app/latest", async (req, res) => {
+  app.get("/api/v5/app/latest", validate(schemas.emptyPayload, "query"), async (req, res) => {
     const isAppEnabled = settings.desktop_app?.enabled !== false;
     if (!isAppEnabled) {
       return res.json({
@@ -243,7 +244,7 @@ module.exports.load = async function (app, db) {
     res.json(releaseInfo);
   });
 
-  app.get("/api/v5/app/download/:platform", async (req, res) => {
+  app.get("/api/v5/app/download/:platform", validate(schemas.platformParam, "params"), async (req, res) => {
     const isAppEnabled = settings.desktop_app?.enabled !== false;
     if (!isAppEnabled) {
       return res.status(403).json({ error: "Overnode Desktop download is disabled." });
@@ -268,7 +269,7 @@ module.exports.load = async function (app, db) {
     return res.status(400).json({ error: "Invalid platform. Use 'mac' or 'windows'." });
   });
 
-  app.get("/api/v5/resources", async (req, res) => {
+  app.get("/api/v5/resources", validate(schemas.emptyPayload, "query"), async (req, res) => {
     try {
       if (!authz.hasUserSession(req)) {
         return res.status(401).json({
@@ -362,7 +363,7 @@ module.exports.load = async function (app, db) {
     }
   });
 
-  app.get("/api/coins", async (req, res) => {
+  app.get("/api/coins", validate(schemas.emptyPayload, "query"), async (req, res) => {
     if (!authz.hasUserSession(req)) {
       return res.status(401).json({
         error: "Not authenticated"
@@ -381,7 +382,7 @@ module.exports.load = async function (app, db) {
   });
 
   // User
-  app.get("/api/user", async (req, res) => {
+  app.get("/api/user", validate(schemas.emptyPayload, "query"), async (req, res) => {
     if (!authz.hasUserSession(req)) {
       return res.status(401).json({
         error: "Not authenticated"
@@ -390,7 +391,7 @@ module.exports.load = async function (app, db) {
     res.json(authz.getSessionUser(req));
   });
 
-  app.get("/api/remote/user", async (req, res) => {
+  app.get("/api/remote/user", validate(schemas.emptyPayload, "query"), async (req, res) => {
     if (!authz.hasPterodactylSession(req)) {
       return res.status(401).json({
         error: "Not authenticated"
@@ -408,7 +409,7 @@ module.exports.load = async function (app, db) {
   });
 
   // Consolidated init endpoint - replaces 5+ separate calls on page load
-  app.get("/api/v5/init", async (req, res) => {
+  app.get("/api/v5/init", validate(schemas.emptyPayload, "query"), async (req, res) => {
     try {
       if (!authz.hasUserSession(req)) {
         return res.status(401).json({
@@ -561,7 +562,7 @@ module.exports.load = async function (app, db) {
   }
 
   // 1. Get User Info
-  app.post('/api/v5/user/info', authenticateApiKey, async (req, res) => {
+  app.post('/api/v5/user/info', authenticateApiKey, validate(schemas.apiV5UserInfo), async (req, res) => {
     try {
       const { target } = req.body;
       const user = await resolveUser(target);
@@ -583,7 +584,7 @@ module.exports.load = async function (app, db) {
   });
 
   // 2. Modify User Coins
-  app.post('/api/v5/user/coins', authenticateApiKey, async (req, res) => {
+  app.post('/api/v5/user/coins', authenticateApiKey, validate(schemas.apiV5UserCoins), async (req, res) => {
     try {
       const { target, action, amount, reason, moderator } = req.body;
       const user = await resolveUser(target);
@@ -629,7 +630,7 @@ module.exports.load = async function (app, db) {
   });
 
   // 3. Modify User Resources
-  app.post('/api/v5/user/resources', authenticateApiKey, async (req, res) => {
+  app.post('/api/v5/user/resources', authenticateApiKey, validate(schemas.apiV5UserResources), async (req, res) => {
     try {
       const { target, action, reason, cpu, ram, disk, servers, moderator } = req.body;
       const user = await resolveUser(target);
@@ -696,7 +697,7 @@ module.exports.load = async function (app, db) {
   });
 
   // 4. Ban User
-  app.post('/api/v5/user/ban', authenticateApiKey, async (req, res) => {
+  app.post('/api/v5/user/ban', authenticateApiKey, validate(schemas.apiV5UserBan), async (req, res) => {
     try {
       const { target, reason, moderator, moderatorId } = req.body;
       const user = await resolveUser(target);
@@ -735,7 +736,7 @@ module.exports.load = async function (app, db) {
   });
 
   // 5. Unban User
-  app.post('/api/v5/user/unban', authenticateApiKey, async (req, res) => {
+  app.post('/api/v5/user/unban', authenticateApiKey, validate(schemas.apiV5UserUnban), async (req, res) => {
     try {
       const { target, reason, moderator } = req.body;
       const user = await resolveUser(target);
@@ -775,7 +776,7 @@ module.exports.load = async function (app, db) {
   });
 
   // 6. List User Servers
-  app.post('/api/v5/server/list', authenticateApiKey, async (req, res) => {
+  app.post('/api/v5/server/list', authenticateApiKey, validate(schemas.apiV5ServerList), async (req, res) => {
     try {
       const { target } = req.body;
       const user = await resolveUser(target);
@@ -793,7 +794,7 @@ module.exports.load = async function (app, db) {
   });
 
   // 7. Get Server Info
-  app.post('/api/v5/server/info', authenticateApiKey, async (req, res) => {
+  app.post('/api/v5/server/info', authenticateApiKey, validate(schemas.apiV5ServerInfo), async (req, res) => {
     try {
       const { serverId } = req.body;
       if (!serverId) return res.status(400).json({ error: 'Missing serverId' });
@@ -834,7 +835,7 @@ module.exports.load = async function (app, db) {
   });
 
   // 8. Control Server Power
-  app.post('/api/v5/server/control', authenticateApiKey, async (req, res) => {
+  app.post('/api/v5/server/control', authenticateApiKey, validate(schemas.apiV5ServerControl), async (req, res) => {
     try {
       const { serverId, action, reason, moderator } = req.body;
       if (!serverId) return res.status(400).json({ error: 'Missing serverId' });
@@ -868,7 +869,7 @@ module.exports.load = async function (app, db) {
     }
   });
 
-  app.post('/api/v5/server/allocation/add', authenticateApiKey, async (req, res) => {
+  app.post('/api/v5/server/allocation/add', authenticateApiKey, validate(schemas.apiV5ServerInfo), async (req, res) => {
     try {
       const { serverId, reason, moderator } = req.body;
       if (!serverId) return res.status(400).json({ error: 'Missing serverId' });
@@ -919,7 +920,7 @@ module.exports.load = async function (app, db) {
 
   
   // Delete Server
-  app.post('/api/v5/server/delete', authenticateApiKey, async (req, res) => {
+  app.post('/api/v5/server/delete', authenticateApiKey, validate(schemas.apiV5ServerInfo), async (req, res) => {
     try {
       const { serverId, reason, moderator } = req.body;
       if (!serverId) return res.status(400).json({ error: 'Missing serverId' });
@@ -994,7 +995,7 @@ module.exports.load = async function (app, db) {
   });
 
   // 9. List Nodes
-  app.post('/api/v5/node/list', authenticateApiKey, async (req, res) => {
+  app.post('/api/v5/node/list', authenticateApiKey, validate(schemas.emptyPayload), async (req, res) => {
     try {
       const response = await pteroApi.get('/api/application/nodes?include=servers');
       res.json(response.data.data);
@@ -1005,7 +1006,7 @@ module.exports.load = async function (app, db) {
   });
 
   // 10. Platform Stats
-  app.post('/api/v5/stats', authenticateApiKey, async (req, res) => {
+  app.post('/api/v5/stats', authenticateApiKey, validate(schemas.emptyPayload), async (req, res) => {
     try {
       const totalUsers = await db.user.count();
       const bannedUsers = await db.user.count({ where: { isBanned: true } });

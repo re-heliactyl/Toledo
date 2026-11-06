@@ -1,3 +1,4 @@
+const { validate, schemas } = require('../../handlers/validate');
 /* --------------------------------------------- */
 /* websocket                              */
 /* --------------------------------------------- */
@@ -43,7 +44,7 @@ module.exports.load = async function (app, db) {
   const router = express.Router();
 
   // GET /api/server/:id/websocket - Get WebSocket credentials
-  router.get("/server/:id/websocket", isAuthenticated, requireServerPermission(["websocket.connect", "control.console"]), async (req, res) => {
+  router.get("/server/:id/websocket", validate(schemas.serverIdParam, 'params'), isAuthenticated, requireServerPermission(["websocket.connect", "control.console"]), async (req, res) => {
     try {
       const serverId = req.params.id;
       const responseData = await fetchWebSocketCredentials({
