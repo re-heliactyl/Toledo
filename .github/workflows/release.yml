@@ -31,12 +31,12 @@
        - name: Check if tag exists
          id: check_tag
          run: |
-           if git rev-parse "\${{ steps.get_version.outputs.tag }}" >/dev/null 2>&1; then
+           if git rev-parse "${{ steps.get_version.outputs.tag }}" >/dev/null 2>&1; then
              echo "exists=true" >> $GITHUB_OUTPUT
-             echo "Tag \${{ steps.get_version.outputs.tag }} already exists. Skipping release."
+             echo "Tag ${{ steps.get_version.outputs.tag }} already exists. Skipping release."
            else
              echo "exists=false" >> $GITHUB_OUTPUT
-             echo "New version detected: \${{ steps.get_version.outputs.tag }}"
+             echo "New version detected: ${{ steps.get_version.outputs.tag }}"
            fi
  
        - name: Create Git Tag
@@ -44,17 +44,17 @@
          run: |
            git config user.name "github-actions[bot]"
            git config user.email "github-actions[bot]@users.noreply.github.com"
-           git tag -a "\${{ steps.get_version.outputs.tag }}" -m "Release \${{ steps.get_version.outputs.tag }}"
-           git push origin "\${{ steps.get_version.outputs.tag }}"
+           git tag -a "${{ steps.get_version.outputs.tag }}" -m "Release ${{ steps.get_version.outputs.tag }}"
+           git push origin "${{ steps.get_version.outputs.tag }}"
  
        - name: Create GitHub Release
          if: steps.check_tag.outputs.exists == 'false'
          uses: softprops/action-gh-release@v2
          with:
-           tag_name: \${{ steps.get_version.outputs.tag }}
-           name: Release \${{ steps.get_version.outputs.tag }}
+           tag_name: ${{ steps.get_version.outputs.tag }}
+           name: Release ${{ steps.get_version.outputs.tag }}
            generate_release_notes: true
            files: |
              openapi.json
          env:
-           GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
