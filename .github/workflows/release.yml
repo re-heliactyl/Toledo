@@ -7,6 +7,7 @@
      paths:
        - 'package.json'
        - 'config.toml'
+      - '.github/workflows/release.yml'
  
  permissions:
    contents: write
