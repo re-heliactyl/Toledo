@@ -1,6 +1,6 @@
 {
   "name": "Heliactyl Next",
-  "version": "10.0.0",
+  "version": "10.1.0",
   "description": "The official Heliactyl client area for the Pterodactyl Panel.",
   "main": "app.js",
   "author": "Matt James",
@@ -40,7 +40,7 @@
     "stripe": "^20.4.1",
     "winston": "^3.14.2",
     "ws": "^8.22.0",
-    "zod": "^3.24.2"
+    "zod": "^4.6.7"
   },
   "scripts": {
     "mono:build": "cd ../frontend && npm run build",
@@ -59,14 +59,17 @@
     "prisma:validate:mysql": "node ./scripts/prisma-runner.js validate --provider=mysql",
     "postinstall": "npm run prisma:generate",
     "prestart": "node ./scripts/prisma-runner.js generate && node ./scripts/prisma-runner.js db push --skip-generate",
-    "start": "node --no-deprecation app.js"
+    "start": "node --no-deprecation app.js",
+    "openapi:generate": "node ./scripts/generate-openapi.js"
   },
   "devDependencies": {
+    "@asteasolutions/zod-to-openapi": "9.1.0",
     "@babel/cli": "^7.23.9",
     "@babel/core": "^7.29.7",
     "@babel/plugin-transform-modules-commonjs": "^7.23.3",
     "@babel/preset-env": "^7.24.0",
-    "prisma": "^7.10.1"
+    "prisma": "^7.10.1",
+    "swagger-ui-express": "5.0.1"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

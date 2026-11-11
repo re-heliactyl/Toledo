@@ -17,13 +17,14 @@ const createAuthz = require("./handlers/authz");
 const db = require("./db.js");
 const ModuleLoader = require("./handlers/modules.js");
 
-const VERSION = "10.0.0";
+const VERSION = "10.1.0";
 const PLATFORM_CODENAME = "Toledo";
 const API_LEVEL = 4;
 
 const settings = loadConfig("./config.toml");
 const logger = createLogger();
 const app = express();
+app.disable('x-powered-by');
 app.set('trust proxy', 1);
 const wsInstance = require("express-ws")(app);
 
@@ -42,8 +43,6 @@ app.use(express.text({ limit: "5mb", type: "text/plain" }));
 
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("X-Powered-By", `10th Gen Heliactyl Next (${PLATFORM_CODENAME})`);
-  res.setHeader("X-Heliactyl", `Heliactyl Next v${VERSION} - "${PLATFORM_CODENAME}"`);
   next();
 });
 

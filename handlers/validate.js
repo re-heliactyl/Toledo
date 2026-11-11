@@ -8,6 +8,8 @@
  */
 
 const { z } = require('zod');
+const { extendZodWithOpenApi } = require('@asteasolutions/zod-to-openapi');
+extendZodWithOpenApi(z);
 const net = require('net');
 
 /**
@@ -644,7 +646,7 @@ const schemas = {
 
   // Server allocations
   allocationCreate: z.object({
-    ip: z.string({ required_error: 'IP is required' }).ip('Invalid IP address').trim(),
+    ip: z.union([z.string().ipv4(), z.string().ipv6()], { error: 'Invalid IP address' }),
     port: z.number({ required_error: 'Port is required' }).int().min(1).max(65535)
   }),
 
