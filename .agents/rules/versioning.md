@@ -35,3 +35,10 @@ Maintain consistent file versions, platform build levels, and release dates acro
   - **Patch release (10.x.y)**: For regular production bug fixes, security hardening, or route enhancements.
 - Keep VERSION in server-toledo/app.js, server-toledo/package.json, server-toledo/config.toml, example_config.toml, and openapi.json strictly synchronized on every release.
 - Prepare release notes and tags systematically instead of accumulating unversioned changes on main.
+
+### 5. Automated GitHub Release Pipeline
+- Whenever `package.json` has its `version` bumped and pushed to `main`:
+  - GitHub Actions automatically parses the new SemVer version.
+  - Automatically creates and pushes the Git tag `vX.Y.Z`.
+  - Automatically creates the GitHub Release with generated changelog notes.
+  - Automatically attaches `openapi.json` as a release asset for client apps (Swift, C#, Web).
