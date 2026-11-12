@@ -155,12 +155,13 @@ class ModuleLoader {
           if (entry.isDirectory()) {
             // Recursively scan subdirectory
             await scanDirectory(fullPath, baseDir);
-          } else if (entry.isFile() && entry.name.endsWith(".js")) {
+          } else if (entry.isFile() && (entry.name.endsWith(".js") || (entry.name.endsWith(".ts") && !entry.name.endsWith(".d.ts")))) {
             // Calculate the module ID relative to the base modules directory
             const relativePath = path.relative(baseDir, fullPath);
+            const ext = path.extname(relativePath);
             const moduleId = path.dirname(relativePath) === "."
-              ? path.basename(relativePath, ".js")
-              : path.dirname(relativePath) + "/" + path.basename(relativePath, ".js");
+              ? path.basename(relativePath, ext)
+              : path.dirname(relativePath) + "/" + path.basename(relativePath, ext);
 
             modules.push({
               id: moduleId,

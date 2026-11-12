@@ -1,3 +1,4 @@
+ require('tsx/cjs');
  const fs = require('fs');
  const path = require('path');
  const { generateOpenApiSpec } = require('../handlers/openapi');

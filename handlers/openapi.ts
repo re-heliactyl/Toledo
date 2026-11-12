@@ -1,11 +1,11 @@
-const path = require('path');
- const { extendZodWithOpenApi, OpenAPIRegistry, OpenApiGeneratorV31 } = require('@asteasolutions/zod-to-openapi');
- const { z, schemas } = require('./validate');
+ import path from 'path';
+ import { extendZodWithOpenApi, OpenAPIRegistry, OpenApiGeneratorV31 } from '@asteasolutions/zod-to-openapi';
+ import { z, schemas } from './validate';
  
  // Extend Zod with OpenAPI features
  extendZodWithOpenApi(z);
  
- const registry = new OpenAPIRegistry();
+ export const registry = new OpenAPIRegistry();
  
  // Register Security Schemes
  registry.registerComponent('securitySchemes', 'sessionAuth', {
@@ -25,14 +25,25 @@ const path = require('path');
  // Register Component Schemas
  for (const [name, schema] of Object.entries(schemas)) {
    try {
-     registry.register(name, schema);
-   } catch (e) {
+     registry.register(name, schema as any);
+   } catch {
      // Ignore already registered or non-object schemas
    }
  }
  
+ export interface EndpointDefinition {
+   method: 'get' | 'post' | 'put' | 'patch' | 'delete';
+   path: string;
+   tag: string;
+   summary: string;
+   params?: any;
+   query?: any;
+   body?: any;
+   security?: 'sessionAuth' | 'apiKeyAuth';
+ }
+ 
  // Endpoints Registry Map
- const endpoints = [
+ const endpoints: EndpointDefinition[] = [
    // --- Authentication & 2FA ---
    { method: 'post', path: '/auth/login', tag: 'Auth', summary: 'Authenticate user with credentials', body: schemas.authLogin },
    { method: 'post', path: '/auth/register', tag: 'Auth', summary: 'Register a new user account', body: schemas.authRegister },
@@ -151,7 +162,7 @@ const path = require('path');
  
  // Register each endpoint with OpenAPI 3.1
  for (const ep of endpoints) {
-   const requestDef = {};
+   const requestDef: any = {};
  
    if (ep.params) {
      requestDef.params = ep.params;
@@ -208,19 +219,20 @@ const path = require('path');
    });
  }
  
- function generateOpenApiSpec(providedConfig) {
-  let settings = providedConfig;
-  if (!settings) {
-    try {
-      const loadConfig = require('./config');
-      const configPath = path.resolve(__dirname, '..', 'config.toml');
-      settings = loadConfig(configPath) || {};
-    } catch (e) {
-      settings = {};
-    }
-  }
-  const rawName = settings.website?.name?.trim() || 'Toledo';
-  const appName = rawName.toLowerCase() === 'heliactyl' ? 'Heliactyl Next' : (rawName.charAt(0).toUpperCase() + rawName.slice(1));
+ export function generateOpenApiSpec(providedConfig?: any): any {
+   let settings = providedConfig;
+   if (!settings) {
+     try {
+       const loadConfig = require('./config');
+       const configPath = path.resolve(__dirname, '..', 'config.toml');
+       settings = loadConfig(configPath) || {};
+     } catch {
+       settings = {};
+     }
+   }
+   const rawName = settings.website?.name?.trim() || 'Toledo';
+   const appName = rawName.toLowerCase() === 'heliactyl' ? 'Heliactyl Next' : (rawName.charAt(0).toUpperCase() + rawName.slice(1));
+ 
    const generator = new OpenApiGeneratorV31(registry.definitions);
    return generator.generateDocument({
      openapi: '3.1.0',

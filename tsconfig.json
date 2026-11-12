@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "CommonJS",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "allowJs": true,
+    "checkJs": false,
+    "resolveJsonModule": true,
+    "noEmit": true
+  },
+  "include": [
+    "handlers/**/*",
+    "modules/**/*",
+    "scripts/**/*",
+    "tests/**/*",
+    "app.js",
+    "db.js"
+  ],
+  "exclude": [
+    "node_modules",
+    "generated"
+  ]
+}

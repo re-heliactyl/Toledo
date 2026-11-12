@@ -1,5 +1,7 @@
 "use strict";
 
+require("tsx/cjs");
+
 const startTime = process.hrtime();
 const express = require("express");
 const session = require("express-session");

@@ -40,7 +40,8 @@
     "stripe": "^20.4.1",
     "winston": "^3.14.2",
     "ws": "^8.22.0",
-    "zod": "^4.6.7"
+    "zod": "^4.6.7",
+    "tsx": "^4.23.15"
   },
   "scripts": {
     "mono:build": "cd ../frontend && npm run build",
@@ -60,7 +61,8 @@
     "postinstall": "npm run prisma:generate",
     "prestart": "node ./scripts/prisma-runner.js generate && node ./scripts/prisma-runner.js db push --skip-generate",
     "start": "node --no-deprecation app.js",
-    "openapi:generate": "node ./scripts/generate-openapi.js"
+    "openapi:generate": "node ./scripts/generate-openapi.js",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@asteasolutions/zod-to-openapi": "9.1.0",
@@ -68,8 +70,11 @@
     "@babel/core": "^7.29.7",
     "@babel/plugin-transform-modules-commonjs": "^7.23.3",
     "@babel/preset-env": "^7.24.0",
+    "@types/express": "5.0.6",
+    "@types/node": "26.6.6",
     "prisma": "^7.10.1",
-    "swagger-ui-express": "5.0.1"
+    "swagger-ui-express": "5.0.1",
+    "typescript": "7.0.2"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
