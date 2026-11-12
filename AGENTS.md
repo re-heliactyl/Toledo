@@ -24,7 +24,7 @@
  
  The detailed rules live in `.agents/rules/`. Read the relevant file before acting:
  
- - **Backend Architecture** - [.agents/rules/backend-architecture.md](.agents/rules/backend-architecture.md) - TypeScript standard, strict Zod validation, and multi-client SDK parity
+ - **Backend Architecture** - [.agents/rules/backend-architecture.md](.agents/rules/backend-architecture.md) - Strict TypeScript, zero 'any' policy, Zod validation, and multi-client contract sync
  - **API Contracts** - [.agents/rules/api-contracts.md](.agents/rules/api-contracts.md) - Mandatory Zod validation and continuous OpenAPI 3.1 sync
  - **Database Parity** - [.agents/rules/database-parity.md](.agents/rules/database-parity.md) - Dual SQLite & MySQL schema parity and validation
  - **Dependencies** - [.agents/rules/dependencies.md](.agents/rules/dependencies.md) - Always inspect and install the latest compatible package versions
@@ -39,6 +39,7 @@
  
  - Prefer `pnpm` when available; fall back to `npm` if pnpm is missing or if node_modules was already installed via npm. Never mix lockfiles
  - Never add backend routes without Zod validation and OpenAPI registration
+- Never use the any type in TypeScript: always use explicit interfaces, types, or unknown with type narrowing
  - Always keep SQLite and MySQL schemas in strict parity when modifying Prisma models
  - Never expose internal tokens or server version signatures in public response headers
  - All agent rules, AGENTS.md, and code documentation must strictly be written in English

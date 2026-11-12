@@ -1,6 +1,7 @@
  import path from 'path';
- import { extendZodWithOpenApi, OpenAPIRegistry, OpenApiGeneratorV31 } from '@asteasolutions/zod-to-openapi';
- import { z, schemas } from './validate';
+ import { extendZodWithOpenApi, OpenAPIRegistry, OpenApiGeneratorV31, type RouteConfig } from '@asteasolutions/zod-to-openapi';
+ import { z, type ZodTypeAny } from 'zod';
+ const { schemas } = require('./validate');
  
  // Extend Zod with OpenAPI features
  extendZodWithOpenApi(z);
@@ -23,24 +24,32 @@
  });
  
  // Register Component Schemas
- for (const [name, schema] of Object.entries(schemas)) {
+ for (const [name, schema] of Object.entries(schemas as Record<string, ZodTypeAny>)) {
    try {
-     registry.register(name, schema as any);
+     registry.register(name, schema);
    } catch {
      // Ignore already registered or non-object schemas
    }
  }
  
+ export type HttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete';
+ export type SecuritySchemeType = 'sessionAuth' | 'apiKeyAuth';
+ 
+ export type RouteParams = NonNullable<RouteConfig['request']>['params'];
+ export type RouteQuery = NonNullable<RouteConfig['request']>['query'];
+ 
  export interface EndpointDefinition {
-   method: 'get' | 'post' | 'put' | 'patch' | 'delete';
+   method: HttpMethod;
    path: string;
    tag: string;
    summary: string;
-   params?: any;
-   query?: any;
-   body?: any;
-   security?: 'sessionAuth' | 'apiKeyAuth';
+   params?: RouteParams;
+   query?: RouteQuery;
+   body?: ZodTypeAny;
+   security?: SecuritySchemeType;
  }
+ 
+ type RequestConfig = NonNullable<RouteConfig['request']>;
  
  // Endpoints Registry Map
  const endpoints: EndpointDefinition[] = [
@@ -162,7 +171,7 @@
  
  // Register each endpoint with OpenAPI 3.1
  for (const ep of endpoints) {
-   const requestDef: any = {};
+   const requestDef: RequestConfig = {};
  
    if (ep.params) {
      requestDef.params = ep.params;
@@ -219,9 +228,17 @@
    });
  }
  
- export function generateOpenApiSpec(providedConfig?: any): any {
-   let settings = providedConfig;
-   if (!settings) {
+ export interface ToledoConfig {
+   version?: string;
+   website?: {
+     name?: string;
+     domain?: string;
+   };
+ }
+ 
+ export function generateOpenApiSpec(providedConfig?: ToledoConfig) {
+   let settings: ToledoConfig = providedConfig || {};
+   if (!providedConfig) {
      try {
        const loadConfig = require('./config');
        const configPath = path.resolve(__dirname, '..', 'config.toml');
