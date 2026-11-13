@@ -182,10 +182,16 @@ const schemas = {
       .min(1, 'User ID cannot be empty')
   }),
 
-  // Server ID parameter
+  // Server ID parameter (accepts integer ID, 8-character hex ID, or full UUID)
   serverIdParam: z.object({
-    id: z.string({ required_error: 'Server ID is required' })
-      .min(1, 'Server ID cannot be empty')
+    id: z.string()
+      .regex(/^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\d+)$/, 'Invalid server ID format')
+      .optional(),
+    serverId: z.string()
+      .regex(/^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\d+)$/, 'Invalid server ID format')
+      .optional()
+  }).refine(data => Boolean(data.id || data.serverId), {
+    message: 'Server ID is required'
   }),
 
   // Pagination query

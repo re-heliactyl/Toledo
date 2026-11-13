@@ -499,7 +499,7 @@ module.exports.load = async function (app, db) {
   // Add this new endpoint to plugins.js
   // GET /api/plugins/scan/:serverId - Scan server plugins directory and update DB
   router.get("/plugins/scan/:serverId", validate(schemas.serverIdParam, 'params'), isAuthenticated, ownsServer, async (req, res) => {
-    const { serverId } = req.params;
+    const serverId = req.serverIdentifier || req.params.serverId || req.params.id;
 
     try {
       // Get file listing from Pterodactyl
@@ -570,7 +570,7 @@ module.exports.load = async function (app, db) {
 
   // POST /api/plugins/install/:serverId - Install plugin
   router.post("/plugins/install/:serverId", isAuthenticated, ownsServer, validate(schemas.pluginInstall), async (req, res) => {
-    const { serverId } = req.params;
+    const serverId = req.serverIdentifier || req.params.serverId || req.params.id;
     const { pluginId, platform = 'spigot' } = req.body;
 
     try {
@@ -726,7 +726,7 @@ module.exports.load = async function (app, db) {
 
   // GET /api/plugins/installed/:serverId - List installed plugins
   router.get("/plugins/installed/:serverId", validate(schemas.serverIdParam, 'params'), isAuthenticated, ownsServer, async (req, res) => {
-    const { serverId } = req.params;
+    const serverId = req.serverIdentifier || req.params.serverId || req.params.id;
 
     try {
       // Check DB for installed plugins
@@ -746,7 +746,7 @@ module.exports.load = async function (app, db) {
   });
 
   router.delete("/plugins/untrack/:serverId", isAuthenticated, ownsServer, validate(schemas.pluginUntrack), async (req, res) => {
-    const { serverId } = req.params;
+    const serverId = req.serverIdentifier || req.params.serverId || req.params.id;
     const { pluginId, platform } = req.body;
 
     try {

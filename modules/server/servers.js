@@ -409,7 +409,7 @@ module.exports.load = async function (app, db) {
             const server = user.attributes.relationships.servers.data.find(
                 s => s.attributes.id === req.params.id || s.attributes.identifier === req.params.id
             );
-            const serverIdentifier = server?.attributes?.identifier || req.params.id;
+            const serverIdentifier = req.serverIdentifier || server?.attributes?.identifier || req.params.id;
 
             // Ownership check via 60s Application API cache (consistent with isServerOwner middleware)
             let isOwner = false;
@@ -1028,7 +1028,8 @@ module.exports.load = async function (app, db) {
             }
 
             // Get server info from Pterodactyl using Client API
-            const serverResponse = await pteroClientApi.get(`/api/client/servers/${serverId}`);
+            const serverIdentifier = server.attributes?.identifier || serverId;
+            const serverResponse = await pteroClientApi.get(`/api/client/servers/${serverIdentifier}`);
 
             // Handle different possible response structures
             const serverData = serverResponse.data?.data || serverResponse.data;

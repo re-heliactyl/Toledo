@@ -133,8 +133,9 @@ module.exports.load = async function (app, db) {
 
     router.get('/server/:id/subdomains', authz.requirePterodactylSession, ownsServer, validate(schemas.serverIdParam, 'params'), async (req, res) => {
         try {
+            const serverId = req.serverIdentifier || req.params.id;
             const subdomains = await db.serverSubdomain.findMany({
-                where: { serverId: req.params.id }
+                where: { serverId }
             });
 
             res.json(subdomains);
@@ -147,7 +148,7 @@ module.exports.load = async function (app, db) {
     router.post('/server/:id/subdomains', authz.requirePterodactylSession, ownsServer, validate(schemas.subdomainCreate), async (req, res) => {
         try {
             const sessionUser = authz.getSessionUser(req);
-            const serverId = req.params.id;
+            const serverId = req.serverIdentifier || req.params.id;
             const { subdomain, domainName } = req.body;
 
             if (!subdomain) {

@@ -50,7 +50,7 @@ module.exports.load = async function (app, db) {
   // POST /api/server/:id/files/write
   router.post("/server/:id/files/write", validate(schemas.serverIdParam, 'params'), isAuthenticated, requireServerPermission(["file.create", "file.update"]), express.text({ limit: "50mb", type: "*/*" }), async (req, res) => {
     try {
-      const serverId = req.params.id;
+      const serverId = req.serverIdentifier || req.params.id;
       let file = String(req.query.file || "").trim();
       if (!file) {
         return res.status(400).json({ error: "File parameter is required" });
@@ -112,7 +112,7 @@ module.exports.load = async function (app, db) {
   // POST /api/server/:id/files/create-folder
   router.post("/server/:id/files/create-folder", isAuthenticated, requireServerPermission("file.create"), validate(schemas.fileCreateFolder), async (req, res) => {
     try {
-      const serverId = req.params.id;
+      const serverId = req.serverIdentifier || req.params.id;
       const { root, name } = req.body;
 
       await axios.post(
@@ -142,7 +142,7 @@ module.exports.load = async function (app, db) {
   // PUT /api/server/:id/files/rename
   router.put("/server/:id/files/rename", isAuthenticated, requireServerPermission(["file.create", "file.update"]), validate(schemas.fileRename), async (req, res) => {
     try {
-      const serverId = req.params.id;
+      const serverId = req.serverIdentifier || req.params.id;
       const { root, files } = req.body;
 
       await axios.put(

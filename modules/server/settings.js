@@ -41,7 +41,7 @@ module.exports.load = async function (app, db) {
     // POST Reinstall server
     router.post('/server/:id/reinstall', isAuthenticated, isServerOwner, validate(schemas.serverIdParam, 'params'), async (req, res) => {
         try {
-            const serverId = req.params.id;
+            const serverId = req.serverIdentifier || req.params.id;
             await axios.post(`${settings.pterodactyl.domain}/api/client/servers/${serverId}/settings/reinstall`, {}, {
                 headers: {
                     'Accept': 'application/json',
@@ -60,7 +60,7 @@ module.exports.load = async function (app, db) {
     // POST Rename server
     router.post('/server/:id/rename', isAuthenticated, ownsServer, validate(schemas.serverRename), async (req, res) => {
         try {
-            const serverId = req.params.id;
+            const serverId = req.serverIdentifier || req.params.id;
             const { name } = req.body;
 
             await axios.post(`${settings.pterodactyl.domain}/api/client/servers/${serverId}/settings/rename`,

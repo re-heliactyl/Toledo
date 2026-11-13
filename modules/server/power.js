@@ -52,7 +52,7 @@ module.exports.load = async function (app, db) {
    */
   router.post("/server/:id/power", isAuthenticated, ownsServer, validate(schemas.serverPower), async (req, res) => {
     try {
-      const serverId = req.params.id;
+      const serverId = req.serverIdentifier || req.params.id;
       const { signal } = req.body;
 
       const signalPerms = {
@@ -100,7 +100,7 @@ module.exports.load = async function (app, db) {
    */
   router.post("/server/:id/command", isAuthenticated, requireServerPermission("control.console"), validate(schemas.serverCommand), async (req, res) => {
     try {
-      const serverId = req.params.id;
+      const serverId = req.serverIdentifier || req.params.id;
       const { command } = req.body;
 
       await sendCommandAndGetResponse(serverId, command);

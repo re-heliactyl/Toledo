@@ -119,7 +119,7 @@ module.exports.load = async function (app, db) {
   // GET /api/server/:id/files/list
   router.get("/server/:id/files/list", validate(schemas.serverIdParam, 'params'), isAuthenticated, requireServerPermission("file.read"), async (req, res) => {
     try {
-      const serverId = req.params.id;
+      const serverId = req.serverIdentifier || req.params.id;
       const directory = req.query.directory || "/";
       const page = parseInt(req.query.page) || 1;
       const perPage = parseInt(req.query.per_page) || 10;
@@ -166,7 +166,7 @@ module.exports.load = async function (app, db) {
 
   router.get("/server/:id/files/folder-size", validate(schemas.serverIdParam, 'params'), isAuthenticated, requireServerPermission("file.read"), async (req, res) => {
     try {
-      const serverId = req.params.id;
+      const serverId = req.serverIdentifier || req.params.id;
       const directory = normalizeDirectoryPath(req.query.directory || "/");
       const bypassCache = req.query.refresh === "1";
       const size = await computeFolderSize(serverId, directory, new Set(), { bypassCache });

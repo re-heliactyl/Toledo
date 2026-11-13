@@ -48,7 +48,7 @@ module.exports.load = async function (app, db) {
   // GET /api/server/:id/logs - Get server activity logs
   router.get('/server/:id/logs', isAuthenticated, ownsServer, validate(schemas.serverIdParam, 'params'), async (req, res) => {
     try {
-      const serverId = req.params.id;
+      const serverId = req.serverIdentifier || req.params.id;
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 20;
       const skip = (page - 1) * limit;

@@ -222,12 +222,13 @@
         "properties": {
           "id": {
             "type": "string",
-            "minLength": 1
+            "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
+          },
+          "serverId": {
+            "type": "string",
+            "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
           }
-        },
-        "required": [
-          "id"
-        ]
+        }
       },
       "pagination": {
         "type": "object",
@@ -3490,10 +3491,19 @@
           {
             "schema": {
               "type": "string",
-              "minLength": 1
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
             },
-            "required": true,
+            "required": false,
             "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
+            },
+            "required": false,
+            "name": "serverId",
             "in": "path"
           }
         ],
@@ -3547,10 +3557,19 @@
           {
             "schema": {
               "type": "string",
-              "minLength": 1
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
             },
-            "required": true,
+            "required": false,
             "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
+            },
+            "required": false,
+            "name": "serverId",
             "in": "path"
           }
         ],
@@ -3627,10 +3646,19 @@
           {
             "schema": {
               "type": "string",
-              "minLength": 1
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
             },
-            "required": true,
+            "required": false,
             "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
+            },
+            "required": false,
+            "name": "serverId",
             "in": "path"
           }
         ],
@@ -3703,10 +3731,19 @@
           {
             "schema": {
               "type": "string",
-              "minLength": 1
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
             },
-            "required": true,
+            "required": false,
             "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
+            },
+            "required": false,
+            "name": "serverId",
             "in": "path"
           }
         ],
@@ -3779,10 +3816,19 @@
           {
             "schema": {
               "type": "string",
-              "minLength": 1
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
             },
-            "required": true,
+            "required": false,
             "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
+            },
+            "required": false,
+            "name": "serverId",
             "in": "path"
           }
         ],
@@ -3836,10 +3882,19 @@
           {
             "schema": {
               "type": "string",
-              "minLength": 1
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
             },
-            "required": true,
+            "required": false,
             "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
+            },
+            "required": false,
+            "name": "serverId",
             "in": "path"
           }
         ],
@@ -3984,10 +4039,19 @@
           {
             "schema": {
               "type": "string",
-              "minLength": 1
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
             },
-            "required": true,
+            "required": false,
             "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
+            },
+            "required": false,
+            "name": "serverId",
             "in": "path"
           }
         ],
@@ -4041,10 +4105,19 @@
           {
             "schema": {
               "type": "string",
-              "minLength": 1
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
             },
-            "required": true,
+            "required": false,
             "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
+            },
+            "required": false,
+            "name": "serverId",
             "in": "path"
           }
         ],
@@ -4098,10 +4171,19 @@
           {
             "schema": {
               "type": "string",
-              "minLength": 1
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
             },
-            "required": true,
+            "required": false,
             "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
+            },
+            "required": false,
+            "name": "serverId",
             "in": "path"
           }
         ],
@@ -4155,10 +4237,19 @@
           {
             "schema": {
               "type": "string",
-              "minLength": 1
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
             },
-            "required": true,
+            "required": false,
             "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
+            },
+            "required": false,
+            "name": "serverId",
             "in": "path"
           }
         ],
@@ -4212,10 +4303,19 @@
           {
             "schema": {
               "type": "string",
-              "minLength": 1
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
             },
-            "required": true,
+            "required": false,
             "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
+            },
+            "required": false,
+            "name": "serverId",
             "in": "path"
           }
         ],
@@ -4269,10 +4369,19 @@
           {
             "schema": {
               "type": "string",
-              "minLength": 1
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
             },
-            "required": true,
+            "required": false,
             "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
+            },
+            "required": false,
+            "name": "serverId",
             "in": "path"
           },
           {
@@ -4334,10 +4443,19 @@
           {
             "schema": {
               "type": "string",
-              "minLength": 1
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
             },
-            "required": true,
+            "required": false,
             "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
+            },
+            "required": false,
+            "name": "serverId",
             "in": "path"
           },
           {
@@ -4407,10 +4525,19 @@
           {
             "schema": {
               "type": "string",
-              "minLength": 1
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
             },
-            "required": true,
+            "required": false,
             "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
+            },
+            "required": false,
+            "name": "serverId",
             "in": "path"
           }
         ],
@@ -4486,10 +4613,19 @@
           {
             "schema": {
               "type": "string",
-              "minLength": 1
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
             },
-            "required": true,
+            "required": false,
             "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
+            },
+            "required": false,
+            "name": "serverId",
             "in": "path"
           }
         ],
@@ -4567,10 +4703,19 @@
           {
             "schema": {
               "type": "string",
-              "minLength": 1
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
             },
-            "required": true,
+            "required": false,
             "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
+            },
+            "required": false,
+            "name": "serverId",
             "in": "path"
           }
         ],
@@ -4648,10 +4793,19 @@
           {
             "schema": {
               "type": "string",
-              "minLength": 1
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
             },
-            "required": true,
+            "required": false,
             "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
+            },
+            "required": false,
+            "name": "serverId",
             "in": "path"
           }
         ],
@@ -4726,10 +4880,19 @@
           {
             "schema": {
               "type": "string",
-              "minLength": 1
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
             },
-            "required": true,
+            "required": false,
             "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
+            },
+            "required": false,
+            "name": "serverId",
             "in": "path"
           }
         ],
@@ -4806,10 +4969,19 @@
           {
             "schema": {
               "type": "string",
-              "minLength": 1
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
             },
-            "required": true,
+            "required": false,
             "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
+            },
+            "required": false,
+            "name": "serverId",
             "in": "path"
           }
         ],
@@ -4901,10 +5073,19 @@
           {
             "schema": {
               "type": "string",
-              "minLength": 1
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
             },
-            "required": true,
+            "required": false,
             "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
+            },
+            "required": false,
+            "name": "serverId",
             "in": "path"
           }
         ],
@@ -4976,10 +5157,19 @@
           {
             "schema": {
               "type": "string",
-              "minLength": 1
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
             },
-            "required": true,
+            "required": false,
             "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
+            },
+            "required": false,
+            "name": "serverId",
             "in": "path"
           },
           {
@@ -5049,10 +5239,19 @@
           {
             "schema": {
               "type": "string",
-              "minLength": 1
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
             },
-            "required": true,
+            "required": false,
             "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
+            },
+            "required": false,
+            "name": "serverId",
             "in": "path"
           }
         ],
@@ -5106,10 +5305,19 @@
           {
             "schema": {
               "type": "string",
-              "minLength": 1
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
             },
-            "required": true,
+            "required": false,
             "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
+            },
+            "required": false,
+            "name": "serverId",
             "in": "path"
           }
         ],
@@ -5161,10 +5369,19 @@
           {
             "schema": {
               "type": "string",
-              "minLength": 1
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
             },
-            "required": true,
+            "required": false,
             "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
+            },
+            "required": false,
+            "name": "serverId",
             "in": "path"
           }
         ],
@@ -5218,10 +5435,19 @@
           {
             "schema": {
               "type": "string",
-              "minLength": 1
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
             },
-            "required": true,
+            "required": false,
             "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
+            },
+            "required": false,
+            "name": "serverId",
             "in": "path"
           }
         ],
@@ -5275,10 +5501,19 @@
           {
             "schema": {
               "type": "string",
-              "minLength": 1
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
             },
-            "required": true,
+            "required": false,
             "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
+            },
+            "required": false,
+            "name": "serverId",
             "in": "path"
           }
         ],
@@ -5332,10 +5567,19 @@
           {
             "schema": {
               "type": "string",
-              "minLength": 1
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
             },
-            "required": true,
+            "required": false,
             "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
+            },
+            "required": false,
+            "name": "serverId",
             "in": "path"
           }
         ],
@@ -5451,10 +5695,19 @@
           {
             "schema": {
               "type": "string",
-              "minLength": 1
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
             },
-            "required": true,
+            "required": false,
             "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
+            },
+            "required": false,
+            "name": "serverId",
             "in": "path"
           }
         ],
@@ -5506,10 +5759,19 @@
           {
             "schema": {
               "type": "string",
-              "minLength": 1
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
             },
-            "required": true,
+            "required": false,
             "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
+            },
+            "required": false,
+            "name": "serverId",
             "in": "path"
           }
         ],
@@ -5653,10 +5915,19 @@
           {
             "schema": {
               "type": "string",
-              "minLength": 1
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
             },
-            "required": true,
+            "required": false,
             "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
+            },
+            "required": false,
+            "name": "serverId",
             "in": "path"
           }
         ],
@@ -5708,10 +5979,19 @@
           {
             "schema": {
               "type": "string",
-              "minLength": 1
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
             },
-            "required": true,
+            "required": false,
             "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
+            },
+            "required": false,
+            "name": "serverId",
             "in": "path"
           }
         ],
@@ -6212,10 +6492,19 @@
           {
             "schema": {
               "type": "string",
-              "minLength": 1
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
             },
-            "required": true,
+            "required": false,
             "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
+            },
+            "required": false,
+            "name": "serverId",
             "in": "path"
           }
         ],
@@ -6269,10 +6558,19 @@
           {
             "schema": {
               "type": "string",
-              "minLength": 1
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
             },
-            "required": true,
+            "required": false,
             "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
+            },
+            "required": false,
+            "name": "serverId",
             "in": "path"
           }
         ],
@@ -6352,10 +6650,19 @@
           {
             "schema": {
               "type": "string",
-              "minLength": 1
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
             },
-            "required": true,
+            "required": false,
             "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+)$"
+            },
+            "required": false,
+            "name": "serverId",
             "in": "path"
           }
         ],

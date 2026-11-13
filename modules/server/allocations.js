@@ -43,7 +43,7 @@ module.exports.load = async function (app, db) {
   // Get server allocations
   router.get('/server/:id/allocations', isAuthenticated, ownsServer, validate(schemas.serverIdParam, 'params'), async (req, res) => {
     try {
-      const serverId = req.params.id;
+      const serverId = req.serverIdentifier || req.params.id;
 
       // Fetch allocations from Pterodactyl Panel
       const response = await axios.get(
@@ -78,7 +78,7 @@ module.exports.load = async function (app, db) {
   // Add new allocation
   router.post('/server/:id/allocations', isAuthenticated, isServerOwner, validate(schemas.serverIdParam, 'params'), async (req, res) => {
     try {
-      const serverId = req.params.id;
+      const serverId = req.serverIdentifier || req.params.id;
 
       const response = await axios.post(
         `${PANEL_URL}/api/client/servers/${serverId}/network/allocations`,
@@ -115,7 +115,8 @@ module.exports.load = async function (app, db) {
   // Remove allocation
   router.delete('/server/:id/allocations/:allocationId', isAuthenticated, isServerOwner, validate(schemas.serverIdParam, 'params'), async (req, res) => {
     try {
-      const { id: serverId, allocationId } = req.params;
+      const serverId = req.serverIdentifier || req.params.id;
+      const { allocationId } = req.params;
 
       // First, fetch allocations to check if this is the primary
       const allocationsResponse = await axios.get(
@@ -168,7 +169,8 @@ module.exports.load = async function (app, db) {
   // Set primary allocation
   router.post('/server/:id/allocations/:allocationId/set-primary', isAuthenticated, isServerOwner, validate(schemas.serverIdParam, 'params'), async (req, res) => {
     try {
-      const { id: serverId, allocationId } = req.params;
+      const serverId = req.serverIdentifier || req.params.id;
+      const { allocationId } = req.params;
 
       await axios.post(
         `${PANEL_URL}/api/client/servers/${serverId}/network/allocations/${allocationId}/primary`,
@@ -198,7 +200,8 @@ module.exports.load = async function (app, db) {
   // Update allocation alias (notes)
   router.post('/server/:id/allocations/:allocationId/alias', isAuthenticated, isServerOwner, validate(schemas.allocationAlias), async (req, res) => {
     try {
-      const { id: serverId, allocationId } = req.params;
+      const serverId = req.serverIdentifier || req.params.id;
+      const { allocationId } = req.params;
       const { alias } = req.body;
 
       await axios.post(

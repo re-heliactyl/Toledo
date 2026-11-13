@@ -123,7 +123,7 @@ module.exports.load = async function (app, _db) {
   // GET /api/server/:id/users - List users
   router.get('/server/:id/users', isAuthenticated, ownsServer, validate(schemas.serverIdParam, 'params'), async (req, res) => {
     try {
-      const serverId = req.params.id;
+      const serverId = req.serverIdentifier || req.params.id;
       const response = await axios.get(
         `${PANEL_URL}/api/client/servers/${serverId}/users`,
         {
@@ -147,7 +147,7 @@ module.exports.load = async function (app, _db) {
   // POST /api/server/:id/users - Create user
   router.post('/server/:id/users', isAuthenticated, ownsServer, validate(schemas.subuserCreate), async (req, res) => {
     try {
-      const serverId = req.params.id;
+      const serverId = req.serverIdentifier || req.params.id;
       const { email } = req.body;
 
       const panelUserResponse = await axios.get(
@@ -211,7 +211,8 @@ module.exports.load = async function (app, _db) {
   // DELETE /api/server/:id/users/:userId - Delete user
   router.delete('/server/:id/users/:userId', isAuthenticated, ownsServer, validate(schemas.serverIdParam, 'params'), async (req, res) => {
     try {
-      const { id: serverId, userId } = req.params;
+      const serverId = req.serverIdentifier || req.params.id;
+      const { userId } = req.params;
       await axios.delete(
         `${PANEL_URL}/api/client/servers/${serverId}/users/${userId}`,
         {

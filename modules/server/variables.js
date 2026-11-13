@@ -62,7 +62,7 @@ module.exports.load = async function (app, db) {
   // GET /api/server/:id/variables - Get server variables
   router.get('/server/:id/variables', isAuthenticated, ownsServer, validate(schemas.serverIdParam, 'params'), async (req, res) => {
     try {
-      const serverId = req.params.id;
+      const serverId = req.serverIdentifier || req.params.id;
       const response = await axios.get(
         `${PANEL_URL}/api/client/servers/${serverId}/startup`,
         {
@@ -86,7 +86,7 @@ module.exports.load = async function (app, db) {
   // PUT /api/server/:id/variables - Update server variable
   router.put('/server/:id/variables', isAuthenticated, ownsServer, validate(schemas.serverVariable), async (req, res) => {
     try {
-      const serverId = req.params.id;
+      const serverId = req.serverIdentifier || req.params.id;
       const { key, value } = req.body;
 
       const response = await axios.put(

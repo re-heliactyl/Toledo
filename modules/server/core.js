@@ -86,18 +86,23 @@ const isAuthenticated = (req, res, next) => {
   return authzHandler.requirePterodactylSession(req, res, next);
 };
 
-// Normalize server IDs for comparison
-const normalizeId = (id) => {
-  if (id === null || id === undefined) return '';
-  const value = String(id);
-  return value.includes('-') ? value.split('-')[0] : value;
-};
+// Server ID validation pattern: integer ID, 8-character hex ID, or standard UUID
+const SERVER_ID_REGEX = /^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\d+)$/;
 
-// Check if a Pterodactyl user is the actual owner of a server via Application API
-// Returns true/false. On API failure, logs and returns false.
-// Uses serverCache (60s TTL) - same cache as isServerOwner middleware.
-async function checkIsServerOwner(pteroUser, serverId) {
-  const normalizedTargetId = normalizeId(serverId);
+// Exact comparison function for server IDs without splitting on '-'
+function matchServerId(serverAttr, targetId) {
+  if (!serverAttr || !targetId) return false;
+  const target = String(targetId).trim().toLowerCase();
+  const internalId = serverAttr.id !== undefined && serverAttr.id !== null ? String(serverAttr.id) : '';
+  const identifier = serverAttr.identifier ? String(serverAttr.identifier).toLowerCase() : '';
+  const uuid = serverAttr.uuid ? String(serverAttr.uuid).toLowerCase() : '';
+  return target === identifier || target === uuid || target === internalId;
+}
+
+// Find server owned by user via Application API
+async function findOwnedServer(pteroUser, serverId) {
+  if (!pteroUser?.id || !serverId) return null;
+  const target = String(serverId).trim().toLowerCase();
   const cacheKey = `user_servers_${pteroUser.id}`;
   let ownedServers = serverCache.get(cacheKey);
 
@@ -111,15 +116,24 @@ async function checkIsServerOwner(pteroUser, serverId) {
         },
       }
     );
-    ownedServers = userResponse.data.attributes.relationships.servers.data;
+    ownedServers = userResponse.data?.attributes?.relationships?.servers?.data || [];
     serverCache.set(cacheKey, ownedServers);
   }
 
-  return ownedServers.some(s => {
-    const internalId = normalizeId(s.attributes?.id);
-    const identifier = normalizeId(s.attributes?.identifier);
-    return internalId === normalizedTargetId || identifier === normalizedTargetId;
-  });
+  return ownedServers.find(s => matchServerId(s.attributes || s, target)) || null;
+}
+
+// Check if a Pterodactyl user is the actual owner of a server via Application API
+// Returns true/false. On API failure, logs and returns false.
+// Uses serverCache (60s TTL) - same cache as isServerOwner middleware.
+async function checkIsServerOwner(pteroUser, serverId) {
+  try {
+    const server = await findOwnedServer(pteroUser, serverId);
+    return Boolean(server);
+  } catch (error) {
+    console.error('Error fetching fresh server data from Pterodactyl:', error);
+    return false;
+  }
 }
 
 // Invalidate the ownership cache for a given user
@@ -179,11 +193,14 @@ async function fetchServerSubusers(serverId) {
       }
     );
     serverUsers = Array.isArray(response.data?.data) ? response.data.data : [];
+    serverUsers.clientServerId = clientServerId;
     serverCache.set(cacheKey, serverUsers);
     return serverUsers;
   } catch (error) {
     console.error('Error fetching server subusers from Pterodactyl:', error.message);
-    return [];
+    const empty = [];
+    empty.clientServerId = String(serverId);
+    return empty;
   }
 }
 
@@ -201,10 +218,11 @@ async function fetchSubuserPermissions(pteroUser, serverId) {
   if (matched) {
     return {
       isSubuser: true,
-      permissions: Array.isArray(matched.attributes?.permissions) ? matched.attributes.permissions : []
+      permissions: Array.isArray(matched.attributes?.permissions) ? matched.attributes.permissions : [],
+      serverIdentifier: subusers.clientServerId || String(serverId)
     };
   }
-  return { isSubuser: false, permissions: [] };
+  return { isSubuser: false, permissions: [], serverIdentifier: subusers.clientServerId || String(serverId) };
 }
 
 // Fixed enhancedOwnsServer middleware with fresh Pterodactyl data
@@ -214,6 +232,10 @@ const ownsServer = async (req, res, next) => {
     const serverId = req.params.id || req.params.serverId || req.params.instanceId || req.params.idOrIdentifier || req.query?.id;
     if (!serverId) {
       return res.status(400).json({ error: 'No server ID provided' });
+    }
+
+    if (!SERVER_ID_REGEX.test(String(serverId))) {
+      return res.status(400).json({ error: 'Invalid server ID format' });
     }
 
     const authzHandler = ensureAuthz();
@@ -228,19 +250,25 @@ const ownsServer = async (req, res, next) => {
 
     const pteroUser = authzHandler.getPterodactylUser(req);
     const sessionUser = authzHandler.getSessionUser(req);
-    const normalizedTargetId = normalizeId(serverId);
 
     // FIRST CHECK: Verify ownership via Pterodactyl Application API
-    let isOwner = false;
+    let ownedServer = null;
     try {
-      isOwner = await checkIsServerOwner(pteroUser, serverId);
+      ownedServer = await findOwnedServer(pteroUser, serverId);
     } catch (error) {
       console.error('Error fetching fresh server data from Pterodactyl:', error);
     }
 
-    if (isOwner) {
+    if (ownedServer) {
       req.isOwner = true;
       req.serverPermissions = ['*'];
+      const canonicalIdentifier = ownedServer.attributes?.identifier || String(serverId);
+      req.serverIdentifier = canonicalIdentifier;
+      req.matchedServer = ownedServer;
+      if (req.params) {
+        if (req.params.id) req.params.id = canonicalIdentifier;
+        if (req.params.serverId) req.params.serverId = canonicalIdentifier;
+      }
       return next();
     }
 
@@ -250,6 +278,7 @@ const ownsServer = async (req, res, next) => {
       if (forced && forced.userId === sessionUser.id) {
         req.isOwner = true;
         req.serverPermissions = ['*'];
+        req.serverIdentifier = String(serverId);
         return next();
       }
     } catch (error) {
@@ -261,6 +290,12 @@ const ownsServer = async (req, res, next) => {
     if (subuserResult.isSubuser) {
       req.isOwner = false;
       req.serverPermissions = subuserResult.permissions;
+      const canonicalIdentifier = subuserResult.serverIdentifier || String(serverId);
+      req.serverIdentifier = canonicalIdentifier;
+      if (req.params) {
+        if (req.params.id) req.params.id = canonicalIdentifier;
+        if (req.params.serverId) req.params.serverId = canonicalIdentifier;
+      }
       return next();
     }
 
@@ -286,6 +321,12 @@ const ownsServer = async (req, res, next) => {
     if (dbSubuser) {
       req.isOwner = false;
       req.serverPermissions = subuserResult.permissions || [];
+      const canonicalIdentifier = subuserResult.serverIdentifier || String(serverId);
+      req.serverIdentifier = canonicalIdentifier;
+      if (req.params) {
+        if (req.params.id) req.params.id = canonicalIdentifier;
+        if (req.params.serverId) req.params.serverId = canonicalIdentifier;
+      }
       return next();
     }
 
@@ -305,6 +346,10 @@ const isServerOwner = async (req, res, next) => {
       return res.status(400).json({ error: 'No server ID provided' });
     }
 
+    if (!SERVER_ID_REGEX.test(String(serverId))) {
+      return res.status(400).json({ error: 'Invalid server ID format' });
+    }
+
     const authzHandler = ensureAuthz();
 
     if (!authzHandler) {
@@ -317,21 +362,28 @@ const isServerOwner = async (req, res, next) => {
 
     const pteroUser = authzHandler.getPterodactylUser(req);
 
-    let isOwner = false;
+    let ownedServer = null;
     try {
-      isOwner = await checkIsServerOwner(pteroUser, serverId);
+      ownedServer = await findOwnedServer(pteroUser, serverId);
     } catch (error) {
       console.error('Error verifying server ownership:', error);
       // On API failure, deny access rather than returning 500
       return res.status(403).json({ error: 'Only the server owner can perform this action' });
     }
 
-    if (!isOwner) {
+    if (!ownedServer) {
       return res.status(403).json({ error: 'Only the server owner can perform this action' });
     }
 
     req.isOwner = true;
     req.serverPermissions = ['*'];
+    const canonicalIdentifier = ownedServer.attributes?.identifier || String(serverId);
+    req.serverIdentifier = canonicalIdentifier;
+    req.matchedServer = ownedServer;
+    if (req.params) {
+      if (req.params.id) req.params.id = canonicalIdentifier;
+      if (req.params.serverId) req.params.serverId = canonicalIdentifier;
+    }
     next();
   } catch (error) {
     console.error('Error in isServerOwner middleware:', error);
@@ -545,6 +597,9 @@ module.exports = {
   requireServerPermission,
   fetchServerSubusers,
   fetchSubuserPermissions,
+  findOwnedServer,
+  matchServerId,
+  SERVER_ID_REGEX,
   checkIsServerOwner,
   invalidateOwnershipCache,
   invalidateServerAccessCache,
