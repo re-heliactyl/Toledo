@@ -19,7 +19,7 @@ const createAuthz = require("./handlers/authz");
 const db = require("./db.js");
 const ModuleLoader = require("./handlers/modules.js");
 
-const VERSION = "10.1.0";
+const VERSION = "10.1.1";
 const PLATFORM_CODENAME = "Toledo";
 const API_LEVEL = 4;
 

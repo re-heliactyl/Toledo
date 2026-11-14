@@ -9,7 +9,7 @@ const Stripe = require('stripe');
 
 const HeliactylModule = {
   "name": "Bundles",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "api_level": 4,
   "target_platform": "10.0.0",
   "description": "Bundle subscriptions (Auto Renew, Upgraded Pack, God Pack)",
@@ -132,6 +132,8 @@ class BundleManager {
   }
 
   async activatePack(uid, type, subId = null, custId = null) {
+    const subscriptionId = typeof subId === 'string' && subId.trim() ? subId.trim() : null;
+    const customerId = typeof custId === 'string' && custId.trim() ? custId.trim() : null;
     const cfg = getBundleConfig();
     const prices = this.getPrices();
     const price = prices[type] || 0;
@@ -142,12 +144,12 @@ class BundleManager {
         // Only the main god_pack record gets stripeSubscriptionId (unique constraint).
         // Subsidiary entries use null so they don't conflict.
         await tx.userPack.createMany({ data: [
-          { userId: uid, type: 'god_pack', status: 'active', expiresAt: exp, stripeSubscriptionId: subId, stripeCustomerId: custId },
-          { userId: uid, type: 'auto_renew', status: 'active', expiresAt: exp, stripeSubscriptionId: null, stripeCustomerId: custId },
-          { userId: uid, type: 'upgraded_pack', status: 'active', expiresAt: exp, stripeSubscriptionId: null, stripeCustomerId: custId }
+          { userId: uid, type: 'god_pack', status: 'active', expiresAt: exp, stripeSubscriptionId: subscriptionId, stripeCustomerId: customerId },
+          { userId: uid, type: 'auto_renew', status: 'active', expiresAt: exp, stripeSubscriptionId: null, stripeCustomerId: customerId },
+          { userId: uid, type: 'upgraded_pack', status: 'active', expiresAt: exp, stripeSubscriptionId: null, stripeCustomerId: customerId }
         ]});
       } else {
-        await tx.userPack.create({ data: { userId: uid, type, status: 'active', expiresAt: exp, stripeSubscriptionId: subId, stripeCustomerId: custId } });
+        await tx.userPack.create({ data: { userId: uid, type, status: 'active', expiresAt: exp, stripeSubscriptionId: subscriptionId, stripeCustomerId: customerId } });
       }
 
       // Create transaction for wallet activity + invoice
@@ -162,7 +164,7 @@ class BundleManager {
             bundle: type,
             price_eur: price,
             currency: 'EUR',
-            payment_method: subId ? 'Stripe Subscription' : 'Wallet Credit',
+            payment_method: subscriptionId ? 'Stripe Subscription' : 'Wallet Credit',
             item_type: 'subscription',
             quantity: 1,
             unit_price: price,
@@ -517,9 +519,10 @@ class BundleManager {
         }
 
         // Check if Stripe subscription was renewed before expiring
-        if (freshPack.stripeSubscriptionId) {
+        const subId = typeof freshPack.stripeSubscriptionId === 'string' ? freshPack.stripeSubscriptionId.trim() : '';
+        if (subId) {
           try {
-            const sub = await getStripe().subscriptions.retrieve(freshPack.stripeSubscriptionId);
+            const sub = await getStripe().subscriptions.retrieve(subId);
             if (['active', 'trialing'].includes(sub.status) && sub.current_period_end) {
               const newExp = new Date(sub.current_period_end * 1000);
               if (newExp > new Date()) {
@@ -546,7 +549,7 @@ class BundleManager {
               }
             }
           } catch (err) {
-            console.error("[BUNDLES] Error checking Stripe renewal for " + freshPack.stripeSubscriptionId + ":", err.message);
+            console.error("[BUNDLES] Error checking Stripe renewal for " + subId + ":", err.message);
           }
         }
 
@@ -585,13 +588,16 @@ class BundleManager {
         select: { id: true, userId: true, type: true, stripeSubscriptionId: true }
       });
 
-      // Deduplicate by subscription ID
+      // Deduplicate by subscription ID. Prisma `not: null` also matches empty
+      // strings, and retrieving a blank ID hits GET /v1/subscriptions/.
       const seen = new Set();
-      const unique = activePacks.filter(p => {
-        if (seen.has(p.stripeSubscriptionId)) return false;
-        seen.add(p.stripeSubscriptionId);
-        return true;
-      });
+      const unique = [];
+      for (const p of activePacks) {
+        const subId = typeof p.stripeSubscriptionId === 'string' ? p.stripeSubscriptionId.trim() : '';
+        if (!subId || seen.has(subId)) continue;
+        seen.add(subId);
+        unique.push({ ...p, stripeSubscriptionId: subId });
+      }
 
       for (const pack of unique) {
         try {

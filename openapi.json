@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Heliactyl Next API",
-    "version": "10.1.0",
+    "version": "10.1.1",
     "description": "Official API specification for Heliactyl Next (Toledo).",
     "contact": {
       "name": "Heliactyl Next",

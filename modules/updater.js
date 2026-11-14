@@ -23,7 +23,7 @@ async function checkAdminStatus(req, res, db, requiredPerm = 'admin.updater.mana
 
 const HeliactylModule = {
   name: "Updater",
-  version: "1.2.1",
+  version: "1.2.2",
   api_level: 4,
   target_platform: "10.0.0",
   description: "Auto-update system - DB-based config, admin UI, release checking & automated updates",
@@ -102,6 +102,37 @@ function sanitizeGitTag(tag) {
   return tag;
 }
 
+/**
+ * Download a URL to a local file, following redirects.
+ * @param {string} url
+ * @param {string} destPath
+ * @param {number} redirects
+ * @returns {Promise<string>}
+ */
+function downloadFile(url, destPath, redirects = 5) {
+  return new Promise((resolve, reject) => {
+    const req = https.get(url, { headers: { "User-Agent": "Heliactyl-Updater" }, timeout: 60_000 }, (res) => {
+      if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location && redirects > 0) {
+        res.resume();
+        resolve(downloadFile(res.headers.location, destPath, redirects - 1));
+        return;
+      }
+      if (res.statusCode !== 200) {
+        res.resume();
+        reject(new Error(`Download failed with status code ${res.statusCode}`));
+        return;
+      }
+      const file = require("fs").createWriteStream(destPath);
+      res.on("error", reject);
+      res.pipe(file);
+      file.on("finish", () => file.close((err) => (err ? reject(err) : resolve(destPath))));
+      file.on("error", reject);
+    });
+    req.on("timeout", () => req.destroy(new Error("Download timed out")));
+    req.on("error", reject);
+  });
+}
+
 class UpdateManager {
   constructor(db) {
     this.db = db;
@@ -131,6 +162,10 @@ class UpdateManager {
     const config = await this.getConfig();
     logger.info(`Auto-updater initialized (v${this.currentVersion}, enabled: ${config.enabled})`);
 
+    if (!(await this.hasCommand("git"))) {
+      logger.warn("git not found: in-app updates will fall back to the release tarball. Install git to enable submodule updates.");
+    }
+
     if (config.enabled) {
       const initialTimer = setTimeout(() => this.checkForUpdates(), 10_000);
       if (typeof initialTimer.unref === "function") initialTimer.unref();
@@ -140,6 +175,39 @@ class UpdateManager {
     }
 
     this.setupRoutes(app);
+  }
+
+  async hasCommand(command) {
+    try {
+      await execAsync(`${command} --version`, { timeout: 10_000 });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async downloadReleaseTarball(tag, destDir) {
+    const archive = path.join(this.serverDir, `temp_update_${Date.now()}.tar.gz`);
+    const url = `https://codeload.github.com/${this.repo}/tar.gz/refs/tags/${tag}`;
+    try {
+      await downloadFile(url, archive);
+      await execAsync(`tar -xzf "${archive}" -C "${destDir}" --strip-components=1`, { timeout: 120_000 });
+    } finally {
+      await fs.rm(archive, { force: true }).catch(() => {});
+    }
+  }
+
+  async resolveServerDir(rootDir) {
+    const candidates = [
+      path.join(rootDir, "server-toledo"),
+      path.join(rootDir, "server"),
+      rootDir
+    ];
+    for (const candidate of candidates) {
+      const isServer = await fs.access(path.join(candidate, "app.js")).then(() => true).catch(() => false);
+      if (isServer) return candidate;
+    }
+    throw new Error("Could not locate the server directory in the downloaded release");
   }
 
   async getConfig() {
@@ -366,14 +434,23 @@ class UpdateManager {
 
       logger.info(`Downloading ${tag}...`);
       const cloneUrl = `https://github.com/${this.repo}.git`;
-      await execAsync(`git clone --depth 1 --recurse-submodules --shallow-submodules --branch ${tag} ${cloneUrl} "${tempDir}"`, { timeout: 180_000 });
+      if (await this.hasCommand("git")) {
+        await execAsync(`git clone --depth 1 --recurse-submodules --shallow-submodules --branch ${tag} ${cloneUrl} "${tempDir}"`, { timeout: 180_000 });
+      } else {
+        logger.warn("git not found, falling back to release tarball download");
+        try {
+          await this.downloadReleaseTarball(tag, tempDir);
+        } catch (error) {
+          throw new Error(`git is not installed and the release tarball fallback failed: ${error.message}. Install git or run update.sh on the host.`);
+        }
+      }
 
       logger.info("Backing up current files...");
       await fs.mkdir(backupDir, { recursive: true });
       await this.copyFiltered(this.serverDir, path.join(backupDir, "server"), SERVER_EXCLUDE);
       await this.copyFiltered(this.frontendDir, path.join(backupDir, "frontend"), FRONTEND_EXCLUDE);
 
-      const clonedServerDir = await fs.access(path.join(tempDir, "server-toledo")).then(() => path.join(tempDir, "server-toledo")).catch(() => path.join(tempDir, "server"));
+      const clonedServerDir = await this.resolveServerDir(tempDir);
 
       logger.info("Applying server update...");
       await this.applyUpdate(clonedServerDir, this.serverDir, SERVER_EXCLUDE);
