@@ -548,6 +548,9 @@ module.exports.load = async function (app, db) {
           email: user.email,
           global_name: user.username,
         };
+        req.session.sessionIp = clientIp;
+        req.session.userAgent = req.headers['user-agent'] || '';
+        req.session.createdAt = Date.now();
 
         const bannedUser = await getBanAwareUser(user.id);
         return authz.denyBannedRequest(req, res, bannedUser);

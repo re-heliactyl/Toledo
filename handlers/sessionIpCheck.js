@@ -5,11 +5,17 @@ const loadConfig = require('./config');
 const db = require('../db');
 const settings = loadConfig('./config.toml');
 
+// Safe endpoints that must stay reachable while a session is being
+// re-validated (ban page, settings bootstrap, logout, public app info).
 const ALLOWED_PATHS = new Set([
   '/',
   '/website',
+  '/auth',
   '/banned',
   '/favicon.ico',
+  '/api/user/logout',
+  '/api/v5/state',
+  '/api/v5/settings',
 ]);
 
 function isAllowedRequest(req) {
@@ -18,6 +24,7 @@ function isAllowedRequest(req) {
   if (ALLOWED_PATHS.has(path)) return true;
   if (path.startsWith('/assets/')) return true;
   if (path.startsWith('/auth/')) return true;
+  if (path.startsWith('/api/v5/app')) return true;
 
   return false;
 }
