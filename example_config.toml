@@ -228,3 +228,8 @@ is_default = true
 enabled = true # Set to false to disable the Overnode Desktop showcase & download buttons on the home page
 updater_url = "url-updater-overnode" # Official updater service URL
 
+# ---------------------------------
+# Seasonal Effects
+# ---------------------------------
+[seasonal.snow]
+enabled = false # Falling snow that settles on cards. Users can still turn it off from their profile menu

@@ -127,6 +127,7 @@ function getPublicSettings() {
       coinTransfer: settings.api?.client?.coins?.transfer?.enabled ?? true,
       boosts: settings.api?.client?.coins?.boosts?.enabled ?? true,
       desktopApp: isDesktopAppEnabled,
+      snow: settings.seasonal?.snow?.enabled === true,
     },
     desktopApp: {
       enabled: isDesktopAppEnabled,
