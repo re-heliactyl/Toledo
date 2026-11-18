@@ -228,3 +228,66 @@ is_default = true
 enabled = true # Set to false to disable the Overnode Desktop showcase & download buttons on the home page
 updater_url = "url-updater-overnode" # Official updater service URL
 
+# ---------------------------------
+# Advent Calendar
+# ---------------------------------
+[advent]
+enabled = false # Show the advent calendar on the interface
+start = "01/12/2026 00:00" # First box unlocks at this date (DD/MM/YYYY HH:mm, server local time). 24 boxes, one per day; a missed day is lost
+
+  # Chance (in %) of each reward kind when a box is opened. Whatever is left up to 100% is an empty box
+  [advent.chances]
+  coins = 60
+  resources = 30
+  bundle = 5
+
+  # Coins a box can give
+  [advent.coins]
+  min = 50
+  max = 500
+
+  # Resources: a box gives ONE random enabled type, between its min and max
+  [advent.resources.ram]
+  enabled = true
+  min = 256 # MB
+  max = 1024 # MB
+
+  [advent.resources.disk]
+  enabled = true
+  min = 512 # MB
+  max = 2048 # MB
+
+  [advent.resources.cpu]
+  enabled = true
+  min = 10 # %
+  max = 50 # %
+
+  [advent.resources.servers]
+  enabled = false
+  min = 1
+  max = 1
+
+  # Bundles: enable the packs that can be won. "chance" is each pack's share (%) of the bundle odds above.
+  # A won pack lasts between min_days and max_days and extends the user's current pack if they already have it.
+  [advent.bundle.auto_renew]
+  enabled = true
+  chance = 60
+  min_days = 1
+  max_days = 7
+
+  [advent.bundle.upgraded_pack]
+  enabled = true
+  chance = 30
+  min_days = 1
+  max_days = 5
+
+  [advent.bundle.god_pack]
+  enabled = false
+  chance = 10
+  min_days = 1
+  max_days = 3
+
+  # Discord embed sent when a user wins something
+  [advent.discord]
+  enabled = true
+  webhook = "" # Leave empty to use [logging].webhook

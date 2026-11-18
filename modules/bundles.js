@@ -9,7 +9,7 @@ const Stripe = require('stripe');
 
 const HeliactylModule = {
   "name": "Bundles",
-  "version": "1.1.2",
+  "version": "1.1.3",
   "api_level": 4,
   "target_platform": "10.0.0",
   "description": "Bundle subscriptions (Auto Renew, Upgraded Pack, God Pack)",
@@ -122,6 +122,11 @@ class BundleManager {
 
   async hasAutoRenew(uid) { return this.hasActivePack(uid, 'auto_renew') || this.hasActivePack(uid, 'god_pack'); }
   async hasUpgradedPack(uid) { return this.hasActivePack(uid, 'upgraded_pack') || this.hasActivePack(uid, 'god_pack'); }
+
+  // True while any upgraded_pack or god_pack (paid or won) still covers the user.
+  async hasResourceBoost(uid) {
+    return !!(await this.db.userPack.findFirst({ where: { userId: uid, type: { in: ['upgraded_pack', 'god_pack'] }, status: 'active', expiresAt: { gt: new Date() } } }));
+  }
 
   async getUserPacks(uid) {
     return this.db.userPack.findMany({ where: { userId: uid, status: 'active', expiresAt: { gt: new Date() } }, orderBy: { createdAt: 'desc' } });
@@ -402,15 +407,18 @@ class BundleManager {
 
     if (isGodPack) {
       // Also cancel subsidiary entries (auto_renew, upgraded_pack) that have no sub ID
+      // Packs won on the advent calendar are independent from the subscription and keep running.
       await this.db.userPack.updateMany({
-        where: { userId, status: 'active', type: { in: ['auto_renew', 'upgraded_pack'] }, stripeSubscriptionId: null },
+        where: { userId, status: 'active', type: { in: ['auto_renew', 'upgraded_pack'] }, stripeSubscriptionId: null, source: { not: 'advent' } },
         data: { status: 'cancelled' }
       });
-      try { await this.removeDiscordRole(userId); } catch {}
+      if (!(await this.hasActivePack(userId, 'god_pack'))) {
+        try { await this.removeDiscordRole(userId); } catch {}
+      }
     }
 
     // Downgrade server resources if user had resource boost (upgraded_pack or god_pack)
-    if (hadResourceBoost || isGodPack) {
+    if ((hadResourceBoost || isGodPack) && !(await this.hasResourceBoost(userId))) {
       try { await this.downgradeUserServerResources(userId); } catch {}
     }
   }
@@ -557,7 +565,12 @@ class BundleManager {
         const needsDowngrade = freshPack.type === 'upgraded_pack' || freshPack.type === 'god_pack';
 
         if (isGod) {
-          try { await this.removeDiscordRole(freshPack.userId); } catch {}
+          const otherGod = await this.db.userPack.findFirst({
+            where: { userId: freshPack.userId, type: 'god_pack', status: 'active', expiresAt: { gt: new Date() }, id: { not: freshPack.id } }
+          });
+          if (!otherGod) {
+            try { await this.removeDiscordRole(freshPack.userId); } catch {}
+          }
           await this.db.userPack.updateMany({
             where: { userId: freshPack.userId, status: 'active', type: { in: ['auto_renew', 'upgraded_pack'] }, expiresAt: { lte: new Date() } },
             data: { status: 'expired' }
@@ -567,10 +580,7 @@ class BundleManager {
         await this.db.userPack.update({ where: { id: freshPack.id }, data: { status: 'expired' } });
 
         if (needsDowngrade) {
-          const remainingGod = await this.db.userPack.findFirst({
-            where: { userId: freshPack.userId, type: 'god_pack', status: 'active' }
-          });
-          if (!remainingGod) {
+          if (!(await this.hasResourceBoost(freshPack.userId))) {
             try { await this.downgradeUserServerResources(freshPack.userId); } catch {}
           }
         }

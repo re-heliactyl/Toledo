@@ -636,6 +636,11 @@ const schemas = {
     })).min(1, 'At least one file to rename is required')
   }),
 
+  // Advent calendar: open a box (must be today's box)
+  adventOpen: z.object({
+    day: z.coerce.number().int().min(1, 'Day must be between 1 and 24').max(24, 'Day must be between 1 and 24')
+  }),
+
   // Daily rewards protection
   dailyProtection: z.object({
     level: z.enum(['bronze', 'silver', 'gold'], {

@@ -8,6 +8,7 @@ const getPteroUser = require("../handlers/getPteroUser");
 const cache = require("../handlers/cache");
 const axios = require("axios");
 const LRU = require("lru-cache");
+const { isAdventVisible } = require("./advent.js");
 const createAuthz = require('../handlers/authz');
 const log = require("../handlers/log.js");
 const { suspend: suspendIfNeeded } = require("./admin.js");
@@ -127,6 +128,7 @@ function getPublicSettings() {
       coinTransfer: settings.api?.client?.coins?.transfer?.enabled ?? true,
       boosts: settings.api?.client?.coins?.boosts?.enabled ?? true,
       desktopApp: isDesktopAppEnabled,
+      advent: isAdventVisible(),
     },
     desktopApp: {
       enabled: isDesktopAppEnabled,
