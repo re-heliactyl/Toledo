@@ -70,6 +70,7 @@ model User {
   packs           UserPack[]
   roles           UserRole[]
   serverRenewals  ServerRenewal[]
+  adventClaims    AdventClaim[]
 }
 
 model AntiVpnAllowlist {
@@ -401,6 +402,7 @@ model UserPack {
   status                String    @default("active") // active, expired, cancelled
   stripeSubscriptionId  String?   @unique
   stripeCustomerId      String?
+  source                String    @default("purchase") // purchase, advent
   startedAt             DateTime  @default(now())
   expiresAt             DateTime
   createdAt             DateTime  @default(now())
@@ -484,3 +486,36 @@ model ServerRenewal {
   @@index([userId])
 }
 
+// One row per advent calendar box opened (audit trail: who, what, when, from where)
+model AdventClaim {
+  id             String    @id @default(cuid())
+  userId         String
+  username       String    @db.VarChar(191)
+  discordId      String?   @db.VarChar(191)
+  edition        String    @db.VarChar(16) // calendar start date, e.g. 20261201
+  day            Int
+  rewardKind     String    @db.VarChar(16) // coins, resource, bundle, empty
+  rewardType     String?   @db.VarChar(32) // ram, disk, cpu, servers | auto_renew, upgraded_pack, god_pack
+  amount         Int       @default(0) // coins or resource units (MB, %, slots)
+  bundleDays     Int?
+  label          String?   @db.Text
+  packExpiresAt  DateTime?
+  coinsAfter     Int?
+  ipAddress      String?   @db.VarChar(64)
+  ipSubnet       String?   @db.VarChar(64) // IPv6 /64 prefix, or the IPv4 address
+  country        String?   @db.VarChar(8)
+  userAgent      String?   @db.Text
+  browser        String?   @db.VarChar(64)
+  os             String?   @db.VarChar(64)
+  device         String?   @db.VarChar(16) // desktop, mobile, tablet
+  language       String?   @db.VarChar(64)
+  createdAt      DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([edition, day, userId])
+  @@index([userId])
+  @@index([edition, day])
+  @@index([ipAddress])
+  @@index([ipSubnet])
+}

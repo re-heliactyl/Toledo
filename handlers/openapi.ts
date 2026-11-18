@@ -132,6 +132,8 @@
    // --- Store & Billing ---
    { method: 'get', path: '/api/store/resources', tag: 'Store', summary: 'Get current user resources and costs', security: 'sessionAuth' },
    { method: 'post', path: '/api/store/buy', tag: 'Store', summary: 'Purchase extra server resources with coins', body: schemas.storeBuy, security: 'sessionAuth' },
+   { method: 'get', path: '/api/advent/status', tag: 'Advent', summary: 'Get advent calendar state and opened boxes', security: 'sessionAuth' },
+   { method: 'post', path: '/api/advent/open', tag: 'Advent', summary: "Open today's advent calendar box", body: schemas.adventOpen, security: 'sessionAuth' },
    { method: 'post', path: '/api/coins/transfer', tag: 'Store', summary: 'Transfer coins to another user', body: schemas.coinTransfer, security: 'sessionAuth' },
    { method: 'post', path: '/api/bundles/create-checkout', tag: 'Billing', summary: 'Create Stripe checkout session for bundle or VIP pack', body: schemas.bundleCheckout, security: 'sessionAuth' },
    { method: 'get', path: '/api/billing/transactions', tag: 'Billing', summary: 'Get billing payment history', security: 'sessionAuth' },

@@ -88,6 +88,7 @@ model User {
   packs           UserPack[]
   roles           UserRole[]
   serverRenewals  ServerRenewal[]
+  adventClaims    AdventClaim[]
 }
 
 model AntiVpnAllowlist {
@@ -423,6 +424,7 @@ model UserPack {
   status                String    @default("active") // active, expired, cancelled
   stripeSubscriptionId  String?   @unique
   stripeCustomerId      String?
+  source                String    @default("purchase") // purchase, advent
   startedAt             DateTime  @default(now())
   expiresAt             DateTime
   createdAt             DateTime  @default(now())
@@ -506,3 +508,36 @@ model ServerRenewal {
   @@index([userId])
 }
 
+// One row per advent calendar box opened (audit trail: who, what, when, from where)
+model AdventClaim {
+  id             String    @id @default(cuid())
+  userId         String
+  username       String
+  discordId      String?
+  edition        String    // calendar start date, e.g. 20261201
+  day            Int
+  rewardKind     String    // coins, resource, bundle, empty
+  rewardType     String?   // ram, disk, cpu, servers | auto_renew, upgraded_pack, god_pack
+  amount         Int       @default(0) // coins or resource units (MB, %, slots)
+  bundleDays     Int?
+  label          String?
+  packExpiresAt  DateTime?
+  coinsAfter     Int?
+  ipAddress      String?
+  ipSubnet       String?   // IPv6 /64 prefix, or the IPv4 address
+  country        String?
+  userAgent      String?
+  browser        String?
+  os             String?
+  device         String?   // desktop, mobile, tablet
+  language       String?
+  createdAt      DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([edition, day, userId])
+  @@index([userId])
+  @@index([edition, day])
+  @@index([ipAddress])
+  @@index([ipSubnet])
+}
